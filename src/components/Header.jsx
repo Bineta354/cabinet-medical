@@ -483,239 +483,265 @@ const Header = () => {
 };
 
   return (
-    <header 
-      className="border-b shadow-sm transition-colors duration-200"
-      style={{
-        backgroundColor: settings.couleur_header_fond || '#ffffff',
-        borderColor: settings.couleur_bordure || '#e5e7eb'
-      }}
-    >
-      <div className="px-6 py-4">
-        <div className="flex items-center justify-between">
-          {/* Section gauche - Logo et recherche */}
-          <div className="flex items-center space-x-6">
-            {/* Logo simplifié */}
-            <div className="flex items-center space-x-3">
-              <div className="w-12 h-12 rounded-lg overflow-hidden bg-white border flex items-center justify-center p-1">
-                {cabinetLogo ? (
-                  <img
-                    src={cabinetLogo}
-                    alt="Cabinet Logo"
-                    className="w-full h-full object-contain"
-                    onError={(e) => {
-                      e.target.style.display = 'none';
-                    }}
-                  />
-                ) : (
-                  <Stethoscope className="w-6 h-6 text-medical-primary" />
-                )}
-              </div> 
-              <div>
-                <h1 
-                  className="text-base font-bold"
-                  style={{ 
-                    color: settings.couleur_header_texte || '#111827',
-                    fontFamily: settings.police_famille
-                  }}
-                >
-                  {cabinetName}
-                </h1>
-                <p className="text-xs text-gray-500">
-                  {getPageTitle()}
-                </p>
-              </div>
-            </div>
-
-            {/* Barre de recherche globale */}
-            <button
-              onClick={() => setShowGlobalSearch(true)}
-              className="flex items-center space-x-3 w-80 px-4 py-2 bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-lg transition-colors text-left group"
-            >
-              <Search className="text-gray-400 group-hover:text-gray-600" size={18} />
-              <span className="text-gray-500 group-hover:text-gray-700 flex-1">
-                Rechercher...
-              </span>
-              <div className="flex items-center space-x-1 text-xs text-gray-400">
-                <Command size={12} />
-                <span>K</span>
-              </div>
-            </button>
-          </div>
-
-
-          {/* Section droite - Actions utilisateur */}
-          <div className="flex items-center space-x-3">
-            {/* Notifications */}
-            <div className="relative">
-              <button
-                onClick={() => setShowNotifications(!showNotifications)}
-                className="relative p-2 hover:bg-gray-100 rounded-lg transition-colors"
-              >
-                <Bell size={20} className="text-gray-600" />
-                {unreadCount > 0 && (
-                  <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center animate-pulse">
-                    {unreadCount}
-                  </span>
-                )}
-              </button>
-
-            {/* Dropdown notifications */}
-            <AnimatePresence>
-              {showNotifications && (
-                <motion.div
-                  initial={{ opacity: 0, y: -10, scale: 0.95 }}
-                  animate={{ opacity: 1, y: 0, scale: 1 }}
-                  exit={{ opacity: 0, y: -10, scale: 0.95 }}
-                  className="absolute right-0 mt-2 w-80 bg-white rounded-lg shadow-lg border border-gray-200 z-50"
-                >
-                  <div className="p-4 border-b border-gray-200">
-                    <h3 className="font-semibold text-gray-900">Notifications</h3>
-                  </div>
-                  <div className="max-h-64 overflow-y-auto">
-                    {notifications.length === 0 ? (
-                      <div className="p-4 text-center text-gray-500">
-                        <Bell className="w-8 h-8 mx-auto mb-2 text-gray-300" />
-                        <p className="text-sm">Aucune notification</p>
-                      </div>
-                    ) : (
-                      notifications.map((notification) => (
-                        <div
-                          key={notification.id}
-                          className={`p-4 border-b border-gray-100 hover:bg-gray-50 transition-colors cursor-pointer ${
-                            notification.lu ? 'bg-white' : 'bg-blue-50'
-                          }`}
-                          onClick={() => handleNotificationClick(notification)}
-                        >
-                          <div className="flex items-start space-x-3">
-                            {getNotificationIcon(notification.type_notification)}
-                            <div className="flex-1">
-                              <p className={`text-sm font-medium ${notification.lu ? 'text-gray-700' : 'text-gray-900'}`}>
-                                {notification.titre}
-                              </p>
-                              <p className={`text-sm mt-1 ${notification.lu ? 'text-gray-600' : 'text-gray-700'}`}>
-                                {notification.message}
-                              </p>
-                              <p className="text-xs text-gray-500 mt-1">
-                                {formatNotificationTime(notification.created_at)}
-                              </p>
-                              {notification.patient && (
-                                <p className="text-xs text-blue-600 mt-1">
-                                  Patient: {notification.patient.prenom} {notification.patient.nom}
-                                </p>
-                              )}
-                            </div>
-                            {!notification.lu && (
-                              <div className="w-2 h-2 bg-blue-500 rounded-full mt-2"></div>
-                            )}
-                          </div>
-                        </div>
-                      ))
-                    )}
-                  </div>
-                  <div className="p-3 border-t border-gray-200">
-                    <button 
-                      onClick={() => { setShowNotifications(false); navigate('/notifications'); }}
-                      className="w-full text-sm text-medical-primary hover:text-medical-primary/80 font-medium"
-                    >
-                      Voir toutes les notifications
-                    </button>
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
-
-            {/* Profil utilisateur avec menu dropdown */}
-            <div className="relative">
-              <button
-                onClick={() => setShowUserMenu(!showUserMenu)}
-                className="flex items-center space-x-3 p-2 hover:bg-gray-100 rounded-lg transition-colors"
-              >
-                <div className="text-right">
-                  <p className="text-sm font-medium text-gray-900">
-                    {userName.trim() || 'Utilisateur'}
-                  </p>
-                  <p className="text-xs text-gray-500">
-                    {getRoleDisplayName(userRole)}
-                  </p>
-                </div>
-                {userProfile?.photo_url ? (
-                  <div className="w-10 h-10 rounded-full overflow-hidden border-2 border-medical-primary flex-shrink-0 relative">
+    <>
+      <header 
+        className="border-b shadow-sm transition-colors duration-200"
+        style={{
+          backgroundColor: settings.couleur_header_fond || '#ffffff',
+          borderColor: settings.couleur_bordure || '#e5e7eb'
+        }}
+      >
+        <div className="px-6 py-4">
+          <div className="flex items-center justify-between w-full">
+             {/* GAUCHE : Logo */}
+              <div className="flex items-center space-x-3">
+              {/* Logo simplifié */}
+              <div className="flex items-center space-x-3 mr-10">
+                <div className="w-16 h-16 rounded-lg overflow-hidden bg-white border flex items-center justify-center p-1">
+                  {cabinetLogo ? (
                     <img
-                      src={userProfile.photo_url}
-                      alt={userName}
-                      className="w-full h-full object-cover"
+                      src={cabinetLogo}
+                      alt="Cabinet Logo"
+                      className="w-full h-full object-contain"
                       onError={(e) => {
-                        // Fallback vers initiales si l'image ne charge pas
                         e.target.style.display = 'none';
-                        const fallback = e.target.parentElement.querySelector('.photo-fallback');
-                        if (fallback) fallback.style.display = 'flex';
                       }}
                     />
-                    <div className="w-10 h-10 bg-medical-primary rounded-full flex items-center justify-center text-white font-semibold photo-fallback hidden absolute inset-0">
-                      {userInitials || 'U'}
-                    </div>
-                  </div>
-                ) : (
-                  <div className="w-10 h-10 bg-medical-primary rounded-full flex items-center justify-center text-white font-semibold">
-                    {userInitials || 'U'}
-                  </div>
-                )}
-                <ChevronDown size={16} className={`text-gray-400 transition-transform ${showUserMenu ? 'rotate-180' : ''}`} />
-              </button>
+                  ) : (
+                    <Stethoscope className="w-6 h-6 text-medical-primary" />
+                  )}
+                </div> 
+                <div className="flex flex-col">
+                  <span 
+                    className="text-lg font-bold"
+                    style={{ 
+                      color: settings.couleur_header_texte || '#111827',
+                      fontFamily: settings.police_famille
+                    }}
+                  >
+                    {cabinetName}
+                  </span>
+                  {/*<p className="text-xs text-gray-500">
+                    {getPageTitle()}
+                  </p>*/}
+                  
+                </div>
+              </div>
 
-              {/* Menu utilisateur simplifié */}
+              {/* Barre de recherche globale 
+              <button
+                onClick={() => setShowGlobalSearch(true)}
+                className="flex items-center space-x-3 w-80 px-4 py-2 bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-lg transition-colors text-left group"
+              >
+                <Search className="text-gray-400 group-hover:text-gray-600" size={18} />
+                <span className="text-gray-500 group-hover:text-gray-700 flex-1">
+                  Rechercher...
+                </span>
+                <div className="flex items-center space-x-1 text-xs text-gray-400">
+                  <Command size={12} />
+                  <span>K</span>
+                </div>
+              </button>*/}
+            </div>
+
+            {/* Recherche globale (déplacée à droite) */}
+<button
+  onClick={() => setShowGlobalSearch(true)}
+  className="flex items-center space-x-3 w-80 px-4 py-2 bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-lg transition-colors text-left group"
+>
+  <Search className="text-gray-400 group-hover:text-gray-600" size={18} />
+  <span className="text-gray-500 group-hover:text-gray-700 flex-1">
+    Rechercher...
+  </span>
+  <div className="flex items-center space-x-1 text-xs text-gray-400">
+    <Command size={12} />
+    <span>K</span>
+  </div>
+</button>
+
+
+            {/* Section droite - Actions utilisateur */}
+            <div className="flex items-center space-x-3">
+              {/* Notifications */}
+              <div className="relative">
+                <button
+                  onClick={() => setShowNotifications(!showNotifications)}
+                  className="relative p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                >
+                  <Bell size={20} className="text-gray-600" />
+                  {unreadCount > 0 && (
+                    <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center animate-pulse">
+                      {unreadCount}
+                    </span>
+                  )}
+                </button>
+
+              {/* Dropdown notifications */}
               <AnimatePresence>
-                {showUserMenu && (
+                {showNotifications && (
                   <motion.div
                     initial={{ opacity: 0, y: -10, scale: 0.95 }}
                     animate={{ opacity: 1, y: 0, scale: 1 }}
                     exit={{ opacity: 0, y: -10, scale: 0.95 }}
-                    className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 z-50"
+                    className="absolute right-0 mt-2 w-80 bg-white rounded-lg shadow-lg border border-gray-200 z-50"
                   >
-                    <div className="p-2">
-                      <Link
-                        to="/profile"
-                        onClick={() => setShowUserMenu(false)}
-                        className="w-full flex items-center space-x-2 px-3 py-2 text-gray-700 hover:bg-gray-50 rounded-lg transition-colors"
-                      >
-                        <User size={16} />
-                        <span>Mon Profil</span>
-                      </Link>
-
-                      {hasRole('admin') && (
-                        <Link
-                          to="/parametrage"
-                          onClick={() => setShowUserMenu(false)}
-                          className="w-full flex items-center space-x-2 px-3 py-2 text-gray-700 hover:bg-gray-50 rounded-lg transition-colors"
-                        >
-                          <Settings size={16} />
-                          <span>Paramétrage Système</span>
-                        </Link>
+                    <div className="p-4 border-b border-gray-200">
+                      <h3 className="font-semibold text-gray-900">Notifications</h3>
+                    </div>
+                    <div className="max-h-64 overflow-y-auto">
+                      {notifications.length === 0 ? (
+                        <div className="p-4 text-center text-gray-500">
+                          <Bell className="w-8 h-8 mx-auto mb-2 text-gray-300" />
+                          <p className="text-sm">Aucune notification</p>
+                        </div>
+                      ) : (
+                        notifications.map((notification) => (
+                          <div
+                            key={notification.id}
+                            className={`p-4 border-b border-gray-100 hover:bg-gray-50 transition-colors cursor-pointer ${
+                              notification.lu ? 'bg-white' : 'bg-blue-50'
+                            }`}
+                            onClick={() => handleNotificationClick(notification)}
+                          >
+                            <div className="flex items-start space-x-3">
+                              {getNotificationIcon(notification.type_notification)}
+                              <div className="flex-1">
+                                <p className={`text-sm font-medium ${notification.lu ? 'text-gray-700' : 'text-gray-900'}`}>
+                                  {notification.titre}
+                                </p>
+                                <p className={`text-sm mt-1 ${notification.lu ? 'text-gray-600' : 'text-gray-700'}`}>
+                                  {notification.message}
+                                </p>
+                                <p className="text-xs text-gray-500 mt-1">
+                                  {formatNotificationTime(notification.created_at)}
+                                </p>
+                                {notification.patient && (
+                                  <p className="text-xs text-blue-600 mt-1">
+                                    Patient: {notification.patient.prenom} {notification.patient.nom}
+                                  </p>
+                                )}
+                              </div>
+                              {!notification.lu && (
+                                <div className="w-2 h-2 bg-blue-500 rounded-full mt-2"></div>
+                              )}
+                            </div>
+                          </div>
+                        ))
                       )}
-                      <hr className="my-1" />
+                    </div>
+                    <div className="p-3 border-t border-gray-200">
                       <button 
-                        onClick={handleLogout}
-                        className="w-full flex items-center space-x-2 px-3 py-2 text-red-700 hover:bg-red-50 rounded-lg transition-colors"
+                        onClick={() => { setShowNotifications(false); navigate('/notifications'); }}
+                        className="w-full text-sm text-medical-primary hover:text-medical-primary/80 font-medium"
                       >
-                        <LogOut size={16} />
-                        <span>Déconnexion</span>
+                        Voir toutes les notifications
                       </button>
                     </div>
                   </motion.div>
                 )}
               </AnimatePresence>
             </div>
+
+              {/* Profil utilisateur avec menu dropdown */}
+              <div className="relative">
+                <button
+                  onClick={() => setShowUserMenu(!showUserMenu)}
+                  className="flex items-center space-x-3 p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                >
+                  <div className="text-right">
+                    <p className="text-sm font-medium text-gray-900">
+                      {userName.trim() || 'Utilisateur'}
+                    </p>
+                    <p className="text-xs text-gray-500">
+                      {getRoleDisplayName(userRole)}
+                    </p>
+                  </div>
+                  {userProfile?.photo_url ? (
+                    <div className="w-10 h-10 rounded-full overflow-hidden border-2 border-medical-primary flex-shrink-0 relative">
+                      <img
+                        src={userProfile.photo_url}
+                        alt={userName}
+                        className="w-full h-full object-cover"
+                        onError={(e) => {
+                          // Fallback vers initiales si l'image ne charge pas
+                          e.target.style.display = 'none';
+                          const fallback = e.target.parentElement.querySelector('.photo-fallback');
+                          if (fallback) fallback.style.display = 'flex';
+                        }}
+                      />
+                      <div className="w-10 h-10 bg-medical-primary rounded-full flex items-center justify-center text-white font-semibold photo-fallback hidden absolute inset-0">
+                        {userInitials || 'U'}
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="w-10 h-10 bg-medical-primary rounded-full flex items-center justify-center text-white font-semibold">
+                      {userInitials || 'U'}
+                    </div>
+                  )}
+                  <ChevronDown size={16} className={`text-gray-400 transition-transform ${showUserMenu ? 'rotate-180' : ''}`} />
+                </button>
+
+                {/* Menu utilisateur simplifié */}
+                <AnimatePresence>
+                  {showUserMenu && (
+                    <motion.div
+                      initial={{ opacity: 0, y: -10, scale: 0.95 }}
+                      animate={{ opacity: 1, y: 0, scale: 1 }}
+                      exit={{ opacity: 0, y: -10, scale: 0.95 }}
+                      className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 z-50"
+                    >
+                      <div className="p-2">
+                        <Link
+                          to="/profile"
+                          onClick={() => setShowUserMenu(false)}
+                          className="w-full flex items-center space-x-2 px-3 py-2 text-gray-700 hover:bg-gray-50 rounded-lg transition-colors"
+                        >
+                          <User size={16} />
+                          <span>Mon Profil</span>
+                        </Link>
+
+                        {hasRole('admin') && (
+                          <Link
+                            to="/parametrage"
+                            onClick={() => setShowUserMenu(false)}
+                            className="w-full flex items-center space-x-2 px-3 py-2 text-gray-700 hover:bg-gray-50 rounded-lg transition-colors"
+                          >
+                            <Settings size={16} />
+                            <span>Paramétrage Système</span>
+                          </Link>
+                        )}
+                        <hr className="my-1" />
+                        <button 
+                          onClick={handleLogout}
+                          className="w-full flex items-center space-x-2 px-3 py-2 text-red-700 hover:bg-red-50 rounded-lg transition-colors"
+                        >
+                          <LogOut size={16} />
+                          <span>Déconnexion</span>
+                        </button>
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+            </div>
           </div>
         </div>
-      </div>
+        
 
+        
+      </header>
+
+      <div className="px-6 py-2">
+        <h2 className="text-sm text-gray-500">
+          {getPageTitle()}
+        </h2>
+      </div>
       {/* Composant de recherche globale */}
-      <GlobalSearch 
-        isOpen={showGlobalSearch}
-        onClose={() => setShowGlobalSearch(false)}
-      />
-    </header>
+        <GlobalSearch 
+          isOpen={showGlobalSearch}
+          onClose={() => setShowGlobalSearch(false)}
+        />
+    </>
   );
 };
 
