@@ -130,6 +130,32 @@ const Login = () => {
   if (!showQuickLogin) return;
 
   const loadUsers = async () => {
+    const { data: tenants } = await supabase
+      .from('tenants')
+      .select('id, name, logo_url')
+      .not('name', 'ilike', '%default%')
+      .order('name');
+
+    const { data: users } = await supabase
+      .rpc('search_usernames', { search_term: '' });
+
+    if (tenants && users) {
+      const grouped = tenants.map(tenant => ({
+        ...tenant,
+        users: users.filter(u => u.tenant_id === tenant.id)
+      })).filter(t => t.users.length > 0);
+
+      setTestUsers(grouped);
+    }
+  };
+
+  loadUsers();
+}, [showQuickLogin]);
+
+  /*useEffect(() => {
+  if (!showQuickLogin) return;
+
+  const loadUsers = async () => {
     const { data, error } = await supabase
       .rpc('search_usernames', { search_term: '' });
 
@@ -162,7 +188,7 @@ const Login = () => {
   };
 
   loadUsers();
-}, [showQuickLogin]);
+}, [showQuickLogin]);*/
 
   // Fonction pour rechercher les usernames via RPC
   const searchUsernames = async (searchTerm) => {
@@ -263,14 +289,41 @@ const Login = () => {
           setTimeout(() => {
             navigate('/reset-password?temp=true');
           }, 1500);
-        } else {
+          } else {
+            try { localStorage.removeItem('hasTemporaryPassword'); } catch (e) {}
+            setSuccess('Connexion réussie ! Redirection...');
+            
+            // Récupérer le role de l'utilisateur
+            const { data: userData } = await supabase
+              .from('users')
+              .select('role')
+              .eq('username', username)
+              .single();
+
+            setTimeout(() => {
+              if (userData?.role === 'admin') {
+                navigate('/cabinet-welcome');
+              } else {
+                navigate('/dashboard');
+              }
+            }, 1000);
+          }
+        /*} else {
           // Nettoyer un éventuel flag obsolète si l'on se connecte avec un mot de passe normal
           try { localStorage.removeItem('hasTemporaryPassword'); } catch (e) {}
           setSuccess('Connexion réussie ! Redirection...');
           setTimeout(() => {
+            if (result.role === 'admin') {
+              navigate('/cabinet-welcome');
+            } else {
+              navigate('/dashboard');
+            }
+          }, 1000);
+          setSuccess('Connexion réussie ! Redirection...');
+          setTimeout(() => {
             navigate('/dashboard');
           }, 1000);
-        }
+        }*/
       } else {
         setError(result.error);
       }
@@ -330,40 +383,81 @@ const Login = () => {
           
           {/* Boutons de connexion rapide (Gauche) */}
           {showQuickLogin && (
-          <motion.div
-            className="space-y-4"
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: 0.3 }}
-          >
-            <h2 className="text-xl font-semibold text-white mb-4 hidden lg:block">Connexion rapide</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-1 gap-4">
-            {testUsers.map((user, index) => {
-              const IconComponent = user.icon;
-              return (
-                <motion.button
-                  key={user.role}
-                  onClick={() => handleQuickLogin(user)}
-                  className={`w-full ${user.color} text-white p-4 rounded-lg shadow-lg transition-all duration-200 transform hover:scale-105 flex items-center space-x-4 text-left`}
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: 0.4 + index * 0.1 }}
-                >
-                  <div className="bg-white/20 p-2 rounded-full flex-shrink-0">
-                    <IconComponent size={24} />
+            <motion.div
+              className="space-y-6 max-h-screen overflow-y-auto"
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 0.3 }}
+            >
+              <h2 className="text-xl font-semibold text-white hidden lg:block">
+                Connexion rapide
+              </h2>
+
+              {testUsers.map((cabinet) => (
+                <div key={cabinet.id} className="mb-4">
+                  {/* Nom du cabinet */}
+                  <div className="flex items-center space-x-2 mb-2">
+                    {cabinet.logo_url && (
+                      <img
+                        src={cabinet.logo_url}
+                        alt={cabinet.name}
+                        className="w-6 h-6 object-contain rounded"
+                      />
+                    )}
+                    <h3 className="text-white font-semibold text-sm">{cabinet.name}</h3>
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="font-semibold truncate">{user.role}</div>
-                    <div className="text-sm opacity-90 truncate">{user.username}</div>
-                    <div className="text-xs opacity-75 truncate">{user.description}</div>
+
+                  {/* Utilisateurs du cabinet */}
+                  <div className="grid grid-cols-1 gap-2">
+                    {cabinet.users.map((user, index) => {
+                      const roleLabel = user.role === 'doctor' ? 'Médecin'
+                        : user.role === 'secretary' ? 'Secrétaire'
+                        : user.role === 'admin' ? 'Administrateur'
+                        : user.role === 'caissier' ? 'Caissier'
+                        : user.role === 'accounting' ? 'Comptabilité'
+                        : user.role;
+
+                      const color = user.role === 'doctor' ? 'bg-green-500 hover:bg-green-600'
+                        : user.role === 'secretary' ? 'bg-blue-500 hover:bg-blue-600'
+                        : user.role === 'admin' ? 'bg-purple-500 hover:bg-purple-600'
+                        : user.role === 'caissier' ? 'bg-orange-500 hover:bg-orange-600'
+                        : 'bg-indigo-500 hover:bg-indigo-600';
+
+                      const IconComponent = user.role === 'doctor' ? Stethoscope
+                        : user.role === 'admin' ? Shield
+                        : user.role === 'accounting' ? Award
+                        : user.role === 'caissier' ? Calculator
+                        : User;
+
+                      return (
+                        <motion.button
+                          key={user.username}
+                          onClick={() => handleQuickLogin({ ...user, password: '' })}
+                          className={`w-full ${color} text-white p-3 rounded-lg shadow transition-all flex items-center space-x-3 text-left`}
+                          whileHover={{ scale: 1.02 }}
+                          whileTap={{ scale: 0.98 }}
+                          initial={{ opacity: 0, x: -20 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          transition={{ delay: 0.1 + index * 0.05 }}
+                        >
+                          <div className="bg-white/20 p-1.5 rounded-full flex-shrink-0">
+                            <IconComponent size={18} />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="font-medium text-sm truncate">
+                              {user.prenom} {user.nom}
+                            </div>
+                            <div className="text-xs opacity-75 truncate">
+                              {roleLabel} — {user.username}
+                            </div>
+                          </div>
+                        </motion.button>
+                      );
+                    })}
                   </div>
-                </motion.button>
-              );
-            })}
-            </div>
-          </motion.div>
+                </div>
+              ))}
+            </motion.div>
           )}
 
           {/* Formulaire (Droite) */}

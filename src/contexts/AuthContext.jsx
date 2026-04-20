@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
-import { supabase, signIn, signOut, signUp, getCurrentUser } from '../lib/supabase';
+import { supabase, signIn, signOut, signUp } from '../lib/supabase';
 
 const AuthContext = createContext();
 
@@ -19,8 +19,8 @@ export const AuthProvider = ({ children }) => {
   const [profileLoading, setProfileLoading] = useState(false);
   const [profileCacheAt, setProfileCacheAt] = useState(0);
   const lastLoggedProfileRef = useRef(null);
+  //const navigate = useNavigate();
 
-  // Fonction pour charger le profil utilisateur (mémorisée avec useCallback)
   const loadUserProfile = useCallback(async (user) => {
     if (!user?.email && !user?.id) {
       setUserProfile(null);
@@ -29,70 +29,45 @@ export const AuthProvider = ({ children }) => {
 
     try {
       setProfileLoading(true);
-      
-      // Essayer d'abord avec auth_id (plus rapide et plus fiable)
+
       let profileResult = await supabase
         .from('users')
         .select('*')
         .eq('auth_id', user.id)
         .maybeSingle();
-      
-      // Si pas de résultat avec auth_id, essayer avec email
+
       if (!profileResult.data && !profileResult.error && user.email) {
-        console.log('🔄 [AuthContext] Essai avec email comme fallback...');
         profileResult = await supabase
           .from('users')
           .select('*')
           .eq('email', user.email)
           .maybeSingle();
       }
-      
+
       const { data: profile, error: profileError } = profileResult;
-      
+
       if (profileError) {
-        console.warn('⚠️ [AuthContext] Erreur lors du chargement du profil:', profileError.message, {
-          email: user.email,
-          authId: user.id,
-          errorCode: profileError.code,
-          errorDetails: profileError.details
-        });
+        console.warn('⚠️ [AuthContext] Erreur profil:', profileError.message);
         setUserProfile(null);
         return null;
       }
-      
+
       if (!profile) {
-        console.warn('⚠️ [AuthContext] Profil utilisateur non trouvé:', {
-          email: user.email,
-          authId: user.id
-        });
+        console.warn('⚠️ [AuthContext] Profil non trouvé pour:', user.email);
         setUserProfile(null);
         return null;
       }
-      
-      // Log seulement si le profil a vraiment changé (évite les logs dupliqués)
+
       const profileKey = `${profile.id}-${profile.role}`;
       if (lastLoggedProfileRef.current !== profileKey) {
-        console.log('✅ [AuthContext] Profil utilisateur chargé:', { 
-          role: profile.role,
-          email: profile.email,
-          id: profile.id 
-        });
+        console.log('✅ [AuthContext] Profil chargé:', { role: profile.role, id: profile.id });
         lastLoggedProfileRef.current = profileKey;
       }
-      
-      console.log('✅ [AuthContext] Profil utilisateur trouvé:', {
-        id: profile.id,
-        username: profile.username,
-        email: profile.email,
-        role: profile.role,
-        nom: profile.nom,
-        prenom: profile.prenom
-      });
-      
+
       setUserProfile(profile);
       return profile;
     } catch (error) {
-      console.error('❌ [AuthContext] Erreur lors du chargement du profil:', error);
+      console.error('❌ [AuthContext] Erreur chargement profil:', error);
       setUserProfile(null);
       return null;
     } finally {
@@ -104,32 +79,19 @@ export const AuthProvider = ({ children }) => {
   useEffect(() => {
     let mounted = true;
 
-    // Récupérer la session initiale (simplifié, sans timeout)
     supabase.auth.getSession()
       .then(({ data: { session }, error }) => {
         if (!mounted) return;
-
         if (error) {
-          console.error('❌ [AuthContext] Erreur lors de la récupération de la session:', error);
+          console.error('❌ [AuthContext] Erreur session:', error);
           setCurrentUser(null);
           setSession(null);
           setUserProfile(null);
-          setIsLoading(false);
           return;
         }
-
-        console.log('📋 [AuthContext] Session récupérée:', {
-          hasSession: !!session,
-          hasUser: !!session?.user,
-          hasToken: !!session?.access_token,
-          userId: session?.user?.id,
-          email: session?.user?.email
-        });
-
         if (session?.user) {
           setCurrentUser(session.user);
           setSession(session);
-          // Le profil sera chargé dans un useEffect séparé
         } else {
           setCurrentUser(null);
           setSession(null);
@@ -138,62 +100,44 @@ export const AuthProvider = ({ children }) => {
       })
       .catch((error) => {
         if (!mounted) return;
-        console.error('❌ [AuthContext] Erreur critique lors de la récupération de la session:', error);
+        if (error?.name === 'AbortError') return;
+        console.error('❌ [AuthContext] Erreur critique session:', error);
         setCurrentUser(null);
         setSession(null);
         setUserProfile(null);
       })
       .finally(() => {
-        if (mounted) {
-          console.log('✅ [AuthContext] Initialisation terminée, isLoading = false');
-          setIsLoading(false);
-        }
+        if (mounted) setIsLoading(false);
       });
 
-    // Écouter les changements d'authentification Supabase
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         if (!mounted) return;
-        
-        console.log('🔄 [AuthContext] Événement auth:', event, {
-          hasSession: !!session,
-          hasUser: !!session?.user,
-          hasToken: !!session?.access_token
-        });
-        
         try {
           if (event === 'TOKEN_REFRESHED' && session?.user) {
-            console.log('🔄 [AuthContext] Token rafraîchi');
             setSession(session);
             setIsLoading(false);
             return;
           }
-          
           if (event === 'SIGNED_OUT') {
-            console.log('👋 [AuthContext] Utilisateur déconnecté');
             setCurrentUser(null);
             setSession(null);
             setUserProfile(null);
             setIsLoading(false);
             return;
           }
-          
           if (session?.user) {
             setCurrentUser(session.user);
             setSession(session);
-            // Le profil sera chargé dans un useEffect séparé
           } else {
-            console.log('ℹ️ [AuthContext] Session invalide ou expirée');
             setCurrentUser(null);
             setSession(null);
             setUserProfile(null);
           }
         } catch (error) {
-          console.error('❌ [AuthContext] Erreur lors de la mise à jour de la session:', error);
+          console.error('❌ [AuthContext] Erreur onAuthStateChange:', error);
         } finally {
-          if (mounted) {
-            setIsLoading(false);
-          }
+          if (mounted) setIsLoading(false);
         }
       }
     );
@@ -204,61 +148,35 @@ export const AuthProvider = ({ children }) => {
     };
   }, []);
 
-  // Charger le profil utilisateur quand l'utilisateur change (séparé pour éviter les blocages)
+  // Charger le profil quand l'utilisateur change
   useEffect(() => {
-    // Ne pas charger le profil tant que la session initiale est en cours
-    if (isLoading) {
-      return;
-    }
-
-    // Aucun utilisateur connecté → réinitialiser le profil et sortir
+    if (isLoading) return;
     if (!currentUser) {
       setUserProfile(null);
       return;
     }
-
-    // Si le profil est déjà présent sur l'utilisateur courant, synchroniser et éviter un nouvel appel
     if (currentUser.profile) {
-      setUserProfile((prev) => {
-        if (prev?.id === currentUser.profile.id) {
-          return prev;
-        }
-        return currentUser.profile;
-      });
-      setProfileCacheAt((prev) =>
-        currentUser.profile ? Date.now() : prev
+      setUserProfile((prev) =>
+        prev?.id === currentUser.profile.id ? prev : currentUser.profile
       );
+      setProfileCacheAt((prev) => currentUser.profile ? Date.now() : prev);
       return;
     }
-
-    // Si un profil déjà chargé correspond à l'utilisateur courant, attacher au currentUser sans rechargement
     if (userProfile && userProfile.auth_id === currentUser.id) {
       setCurrentUser((prev) => {
-        if (!prev || prev.id !== currentUser.id) {
-          return prev;
-        }
-        if (prev.profile?.id === userProfile.id) {
-          return prev;
-        }
+        if (!prev || prev.id !== currentUser.id) return prev;
+        if (prev.profile?.id === userProfile.id) return prev;
         return { ...prev, profile: userProfile };
       });
       return;
     }
 
-    // Sinon, charger le profil (avec un léger délai pour regrouper les changements)
     const timeoutId = setTimeout(() => {
       loadUserProfile(currentUser).then((profile) => {
-        if (!profile) {
-          return;
-        }
-
+        if (!profile) return;
         setCurrentUser((prev) => {
-          if (!prev || prev.id !== currentUser.id) {
-            return prev;
-          }
-          if (prev.profile?.id === profile.id) {
-            return prev;
-          }
+          if (!prev || prev.id !== currentUser.id) return prev;
+          if (prev.profile?.id === profile.id) return prev;
           return { ...prev, profile };
         });
         setProfileCacheAt(Date.now());
@@ -268,25 +186,24 @@ export const AuthProvider = ({ children }) => {
     return () => clearTimeout(timeoutId);
   }, [currentUser?.id, currentUser?.profile, isLoading, loadUserProfile, userProfile]);
 
-  // Fonction de connexion avec Supabase Auth (utilise maintenant username)
+  // ─── LOGIN ───────────────────────────────────────────────────────────────────
   const login = async (username, password) => {
     try {
       setIsLoading(true);
       const { data, error } = await signIn(username, password);
-      
+
       if (error) {
         return { success: false, error: error.message };
       }
-         // Vérifier si l'utilisateur utilise un mot de passe temporaire
-         const isTemporaryPassword = password === 'temp123456';
-      
-         return { 
-           success: true, 
-           user: data.user,
-           isTemporaryPassword: isTemporaryPassword
-         };
-         
-      
+
+      // Charger le profil pour récupérer le tenant_id
+      const profile = await loadUserProfile(data.user);
+      if (profile?.tenant_id) {
+        localStorage.setItem('lastTenantId', profile.tenant_id);
+      }
+
+      const isTemporaryPassword = password === 'temp123456';
+      return { success: true, user: data.user, isTemporaryPassword };
     } catch (error) {
       return { success: false, error: error.message };
     } finally {
@@ -294,32 +211,48 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  // Fonction de déconnexion avec Supabase Auth
+  // ─── LOGOUT ──────────────────────────────────────────────────────────────────
+
   const logout = async () => {
+  try {
+    setIsLoading(true);
+    const { error } = await signOut();
+    if (error) return { success: false, error: error.message };
+    return { success: true };
+  } catch (error) {
+    return { success: false, error: error.message };
+  } finally {
+    setIsLoading(false);
+  }
+};
+  /*const logout = async () => {
     try {
       setIsLoading(true);
       const { error } = await signOut();
-      
-      if (error) {
-        return { success: false, error: error.message };
+      if (error) return { success: false, error: error.message };
+
+      // Rediriger vers le cabinet si on sait lequel c'est, sinon vers /login
+      const lastTenantId = localStorage.getItem('lastTenantId');
+      if (lastTenantId) {
+        navigate('/cabinet-welcome');
+      } else {
+        navigate('/login');
       }
+
       return { success: true };
     } catch (error) {
       return { success: false, error: error.message };
     } finally {
       setIsLoading(false);
     }
-  };
+  };*/
 
-  // Fonction d'inscription avec Supabase Auth
+  // ─── REGISTER ────────────────────────────────────────────────────────────────
   const register = async (email, password, userData = {}) => {
     try {
       setIsLoading(true);
       const { data, error } = await signUp(email, password, userData);
-      
-      if (error) {
-        return { success: false, error: error.message };
-      }
+      if (error) return { success: false, error: error.message };
       return { success: true, user: data.user };
     } catch (error) {
       return { success: false, error: error.message };
@@ -328,60 +261,32 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  // Vérifier les rôles (utilise le cache du profil ou les métadonnées utilisateur)
+  // ─── HELPERS ─────────────────────────────────────────────────────────────────
   const hasRole = (role) => {
-    // Essayer d'abord le profil en cache
-    if (userProfile?.role) {
-      return userProfile.role === role;
-    }
-    
-    // Puis le profil dans currentUser
-    if (currentUser?.profile?.role) {
-      return currentUser.profile.role === role;
-    }
-    
-    // Enfin les métadonnées utilisateur comme fallback
+    if (userProfile?.role) return userProfile.role === role;
+    if (currentUser?.profile?.role) return currentUser.profile.role === role;
     const userRole = currentUser?.user_metadata?.role || currentUser?.app_metadata?.role;
     return userRole === role;
   };
 
   const hasAnyRole = (roles) => {
-    // Essayer d'abord le profil en cache
-    if (userProfile?.role) {
-      return roles.includes(userProfile.role);
-    }
-    
-    // Puis le profil dans currentUser
-    if (currentUser?.profile?.role) {
-      return roles.includes(currentUser.profile.role);
-    }
-    
-    // Enfin les métadonnées utilisateur comme fallback
+    if (userProfile?.role) return roles.includes(userProfile.role);
+    if (currentUser?.profile?.role) return roles.includes(currentUser.profile.role);
     const userRole = currentUser?.user_metadata?.role || currentUser?.app_metadata?.role;
     return roles.includes(userRole);
   };
 
-  // Obtenir les informations utilisateur (avec cache)
   const getUserProfile = async (forceRefresh = false) => {
-    if (!currentUser) {
-      return null;
-    }
-    
+    if (!currentUser) return null;
     if (userProfile && !forceRefresh) {
       const now = Date.now();
-      if (now - profileCacheAt < 5 * 60 * 1000) {
-        return userProfile;
-      }
+      if (now - profileCacheAt < 5 * 60 * 1000) return userProfile;
       return userProfile;
     }
-    
-    // Éviter les requêtes multiples simultanées
     if (profileLoading) {
-      // Attendre un peu et retourner le cache
       await new Promise(resolve => setTimeout(resolve, 100));
       return userProfile;
     }
-    
     try {
       setProfileLoading(true);
       const { data, error } = await supabase
@@ -389,47 +294,26 @@ export const AuthProvider = ({ children }) => {
         .select('*')
         .eq('email', currentUser.email)
         .maybeSingle();
-      
       if (error) {
-        console.error('Erreur lors de la récupération du profil:', error);
-        return userProfile; // Retourner le cache en cas d'erreur
+        console.error('Erreur profil:', error);
+        return userProfile;
       }
-      
-      // Mettre à jour le cache
       setUserProfile(data);
       setProfileCacheAt(Date.now());
       return data;
     } catch (error) {
-      console.error('Erreur générale lors de la récupération du profil:', error);
-      return userProfile; // Retourner le cache en cas d'erreur
+      console.error('Erreur générale profil:', error);
+      return userProfile;
     } finally {
       setProfileLoading(false);
     }
   };
 
-  // Vérifier si l'utilisateur est authentifié
-  const isAuthenticated = () => {
-    return !!currentUser && !!session;
-  };
+  const isAuthenticated = () => !!currentUser && !!session;
 
-  // Obtenir le token d'accès
   const getAccessToken = () => {
-    if (!session?.access_token) {
-      console.warn('⚠️ [AuthContext] Aucun token d\'accès disponible');
-      return null;
-    }
-    
-    // Vérifier si le token est expiré (optionnel)
-    if (session.expires_at && Date.now() / 1000 >= session.expires_at) {
-      console.warn('⚠️ [AuthContext] Token expiré');
-      return null;
-    }
-    
-    console.log('✅ [AuthContext] Token d\'accès disponible:', {
-      hasToken: !!session.access_token,
-      expiresAt: session.expires_at ? new Date(session.expires_at * 1000).toISOString() : 'N/A'
-    });
-    
+    if (!session?.access_token) return null;
+    if (session.expires_at && Date.now() / 1000 >= session.expires_at) return null;
     return session.access_token;
   };
 
@@ -446,7 +330,7 @@ export const AuthProvider = ({ children }) => {
     isAuthenticated,
     getAccessToken,
     isLoading,
-    profileLoading
+    profileLoading,
   };
 
   return (
@@ -455,4 +339,3 @@ export const AuthProvider = ({ children }) => {
     </AuthContext.Provider>
   );
 };
-

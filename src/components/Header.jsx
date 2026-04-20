@@ -400,10 +400,23 @@ const Header = () => {
     return titles[path] || cabinetName;
   };
 
-  const handleLogout = async () => {
+  /*const handleLogout = async () => {
     try {
       await logout();
       navigate('/login');
+    } catch (error) {
+      console.error('Erreur lors de la déconnexion:', error);
+    }
+  };*/
+  const handleLogout = async () => {
+    try {
+      await logout();
+      const lastTenantId = localStorage.getItem('lastTenantId');
+      if (lastTenantId) {
+        navigate('/cabinet-welcome');
+      } else {
+        navigate('/login');
+      }
     } catch (error) {
       console.error('Erreur lors de la déconnexion:', error);
     }

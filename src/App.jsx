@@ -78,6 +78,7 @@ const RootRedirect = () => {
 const TestSimple = lazy(() => import('./pages/TestSimple'));
 const TestAuth = lazy(() => import('./pages/TestAuth'));
 const TestSpecialityFilter = lazy(() => import('./pages/test/TestSpecialityFilter'));
+const CabinetWelcome = lazy(() => import('./pages/CabinetWelcome'));
 
 // Pages de paramétrage (chargement à la demande)
 const ParametragePage = lazy(() => import('./pages/parametrage/ParametragePage'));
@@ -392,6 +393,8 @@ const AppContent = () => {
             <LazyPageWrapper Component={DentalChartPage} message="Chargement du schéma dentaire..." />
           </ProtectedRoute>
         } />
+
+        
         
         {/* New route for ToothCanvas example */}
         <Route path="/tooth-canvas-example" element={
@@ -1096,6 +1099,12 @@ const AppContent = () => {
         } />
         
         </Route>
+
+        <Route path="/cabinet-welcome" element={
+          <ProtectedRoute allowedRoles={['admin']}>
+            <LazyPageWrapper Component={CabinetWelcome} message="Chargement..." />
+          </ProtectedRoute>
+        } />
 
         {/* Page d'accès refusé */}
         <Route path="/access-denied" element={<AccessDenied />} />
