@@ -23,7 +23,7 @@ interface CreateUserRequest {
   telephone?: string
   horaires_travail?: any
   duree_consultation?: number
-  cabinet_id?: number
+  tenant_id?: number
 }
 
 interface UpdatePasswordRequest {
@@ -136,7 +136,7 @@ serve(async (req) => {
 // Fonction pour créer un utilisateur
 async function createUser(body: any, supabaseAdmin: any) {
   try {
-    const { email, password, nom, prenom, username, role, specialite, specialite_id, telephone, horaires_travail, duree_consultation, cabinet_id } = body as CreateUserRequest
+    const { email, password, nom, prenom, username, role, specialite, specialite_id, telephone, horaires_travail, duree_consultation, tenant_id } = body as CreateUserRequest
 
     // Validation des données
     if (!email || !password || !nom || !prenom || !role || !username) {
@@ -251,7 +251,7 @@ async function createUser(body: any, supabaseAdmin: any) {
     if (telephone) userData.telephone = telephone
     if (horaires_travail) userData.horaires_travail = horaires_travail
     if (duree_consultation) userData.duree_consultation = duree_consultation
-    if (cabinet_id) userData.cabinet_id = cabinet_id
+    if (tenant_id) userData.tenant_id = tenant_id
 
     const { data: newUser, error: userError } = await supabaseAdmin
       .from('users')
