@@ -130,6 +130,7 @@ export const useNotifications = () => {
           .from('notifications_medecin_secretaire')
           .select('*')
           .eq('caissier_id', userProfile.id)
+          .eq('tenant_id', userProfile.tenant_id)
           .order('created_at', { ascending: false })
           .limit(100);
       } else {
@@ -138,6 +139,7 @@ export const useNotifications = () => {
           .from('notifications_medecin_secretaire')
           .select('*')
           .or(`medecin_id.eq.${userProfile.id},secretaire_id.eq.${userProfile.id}`)
+          .eq('tenant_id', userProfile.tenant_id)
           .order('created_at', { ascending: false })
           .limit(100);
       }

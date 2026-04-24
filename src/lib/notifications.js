@@ -284,6 +284,10 @@ export const getUnreadNotifications = async (userId, userRole) => {
         //.not('secretaire_id', 'is', null) // uniquement les notifications destinées aux secrétaires
         .neq('type_notification', 'patient_on_way') // exclure celles pour médecins
         .neq('type_notification', 'doctor_request');
+    } else if (userRole === 'caissier' || userRole === 'cashier') {
+      // Le caissier reçoit uniquement les notifications qui lui sont destinées
+      query = query
+        .eq('caissier_id', userId);
     }
 
     const { data, error } = await query;
@@ -348,12 +352,16 @@ export const getAllNotifications = async (userId, userRole, limit = 50) => {
       query = query
         .eq('medecin_id', userId)
         .in('type_notification', ['patient_on_way', 'doctor_request', 'demande_autorisation']);
-    }else if (userRole === 'secretary') {
-  query = query
-   // .not('secretaire_id', 'is', null)
-    .neq('type_notification', 'patient_on_way')
-    .neq('type_notification', 'doctor_request');
-} 
+    } else if (userRole === 'secretary') {
+      query = query
+       // .not('secretaire_id', 'is', null)
+        .neq('type_notification', 'patient_on_way')
+        .neq('type_notification', 'doctor_request');
+    } else if (userRole === 'caissier' || userRole === 'cashier') {
+      // Le caissier reçoit uniquement les notifications qui lui sont destinées
+      query = query
+        .eq('caissier_id', userId);
+    } 
     /*else if (userRole === 'secretary') {
       // TOUTES les secrétaires voient TOUTES les notifications destinées aux secrétaires
       // IMPORTANT: On ne filtre PAS par secretaire_id pour que toutes les secrétaires voient toutes les notifications
