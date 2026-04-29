@@ -19,6 +19,7 @@ import NotificationPanel from '../components/secretary/NotificationPanel';
 import WebSocketDiagnostic from '../components/WebSocketDiagnostic';
 import RealtimeTest from '../components/RealtimeTest';
 import completeRealtimeService from '../services/completeRealtimeService';
+import { formatDoctorDisplay, formatDoctorSpecialties, getDoctorInitials } from '../utils/doctorUtils';
 
 const WaitingQueuePage = () => {
   const [patients, setPatients] = useState([]);
@@ -939,28 +940,15 @@ const WaitingQueuePage = () => {
               className="btn btn-secondary flex items-center gap-2"
             >
               <Filter className="w-5 h-5" />
-              {selectedDoctor ? `${selectedDoctor.prenom} ${selectedDoctor.nom}` : 'Filtrer par médecin'}
+              {selectedDoctor ? formatDoctorSpecialties(selectedDoctor) : 'Filtrer par spécialité'}
             </button>
             
             {/* Recherche dynamique des médecins */}
             {showDoctorSearch && (
               <div className="absolute top-full left-0 mt-2 w-80 bg-white rounded-lg shadow-lg border border-gray-200 z-50">
                 <div className="p-4 border-b border-gray-200">
-                  <h3 className="font-semibold text-gray-900 mb-3">Sélectionner un médecin</h3>
-                  <div className="relative">
-                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-                    <input
-                      type="text"
-                      placeholder="Rechercher un médecin..."
-                      value={doctorSearchTerm}
-                      onChange={(e) => setDoctorSearchTerm(e.target.value)}
-                      className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-medical-primary focus:border-transparent"
-                      autoFocus
-                    />
-                  </div>
                 </div>
-                
-                <div className="max-h-60 overflow-y-auto">
+                <div className="mt-3 max-h-64 overflow-y-auto">
                   {doctors
                     .filter(doctor => 
                       doctor.nom.toLowerCase().includes(doctorSearchTerm.toLowerCase()) ||
@@ -975,16 +963,18 @@ const WaitingQueuePage = () => {
                           setShowDoctorSearch(false);
                           setDoctorSearchTerm('');
                         }}
-                        className="w-full p-3 text-left hover:bg-gray-50 border-b border-gray-100 last:border-b-0 transition-colors"
+                        className={`w-full text-left px-4 py-3 rounded-lg mb-2 flex items-center gap-3 ${
+                          selectedDoctor?.id === doctor.id 
+                            ? 'bg-blue-50 border-2 border-blue-500' 
+                            : 'hover:bg-gray-50 border-2 border-transparent'
+                        }`}
                       >
-                        <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 bg-medical-primary rounded-full flex items-center justify-center text-white font-semibold text-sm">
-                            {(doctor.prenom?.[0] || '').toUpperCase()}{(doctor.nom?.[0] || '').toUpperCase()}
-                          </div>
-                          <div>
-                            <p className="font-medium text-gray-900">{doctor.prenom} {doctor.nom}</p>
-                            <p className="text-sm text-gray-600">{doctor.specialite}</p>
-                          </div>
+                        <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-semibold">
+                          {getDoctorInitials(doctor)}
+                        </div>
+                        <div>
+                          <p className="font-medium text-gray-900">{formatDoctorSpecialties(doctor)}</p>
+                          <p className="text-sm text-gray-600">Dr. {doctor.prenom} {doctor.nom}</p>
                         </div>
                       </button>
                     ))}
