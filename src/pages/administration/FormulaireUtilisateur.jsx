@@ -17,6 +17,7 @@ import {
   AlertCircle,
   CheckCircle,
   XCircle,
+  X,
   Key,
   Copy,
   RotateCcw,
@@ -957,21 +958,26 @@ const FormulaireUtilisateur = ({ preselectedRole = null }) => {
                             <label className="block text-sm font-medium text-gray-700 mb-1">
                               Spécialités Additionnelles (sélection multiple)
                             </label>
-                            <div className="space-y-2 max-h-32 overflow-y-auto border border-gray-300 rounded-lg p-2">
+                            
+                            {/* Liste des spécialités disponibles à sélectionner */}
+                            <div className="space-y-2 max-h-32 overflow-y-auto border border-gray-300 rounded-lg p-2 mb-3">
                               {getDentalSpecialites().map((specialite) => {
                                 const isPrimarySpeciality = specialite.id === formData.specialite_id;
+                                const isSelected = formData.specialite_ids.includes(specialite.id);
                                 return (
                                   <label 
                                     key={specialite.id} 
                                     className={`flex items-center space-x-2 p-1 rounded ${
                                       isPrimarySpeciality 
                                         ? 'bg-gray-100 cursor-not-allowed opacity-60' 
-                                        : 'cursor-pointer hover:bg-gray-50'
+                                        : isSelected
+                                          ? 'bg-blue-50 cursor-pointer hover:bg-blue-100'
+                                          : 'cursor-pointer hover:bg-gray-50'
                                     }`}
                                   >
                                     <input
                                       type="checkbox"
-                                      checked={formData.specialite_ids.includes(specialite.id)}
+                                      checked={isSelected}
                                       onChange={(e) => {
                                         if (e.target.checked) {
                                           setFormData(prev => ({
@@ -996,6 +1002,48 @@ const FormulaireUtilisateur = ({ preselectedRole = null }) => {
                                 );
                               })}
                             </div>
+                            
+                            {/* Affichage des spécialités sélectionnées avec croix pour supprimer */}
+                            {formData.specialite_ids.length > 0 && (
+                              <div className="flex flex-wrap gap-2">
+                                {formData.specialite_ids.map((specialiteId) => {
+                                  const specialite = getDentalSpecialites().find(s => s.id === specialiteId);
+                                  if (!specialite) return null;
+                                  const isPrimarySpeciality = specialite.id === formData.specialite_id;
+                                  return (
+                                    <div
+                                      key={specialite.id}
+                                      className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-sm font-medium ${
+                                        isPrimarySpeciality
+                                          ? 'bg-gray-200 text-gray-700'
+                                          : 'bg-blue-100 text-blue-800 border border-blue-200'
+                                      }`}
+                                    >
+                                      <span>{specialite.nom}</span>
+                                      {!isPrimarySpeciality && (
+                                        <button
+                                          type="button"
+                                          onClick={() => {
+                                            setFormData(prev => ({
+                                              ...prev,
+                                              specialite_ids: prev.specialite_ids.filter(id => id !== specialite.id)
+                                            }));
+                                          }}
+                                          className="text-blue-600 hover:text-blue-800 focus:outline-none"
+                                          title="Supprimer"
+                                        >
+                                          <X className="w-4 h-4" />
+                                        </button>
+                                      )}
+                                      {isPrimarySpeciality && (
+                                        <span className="text-xs text-gray-500">(Principale)</span>
+                                      )}
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            )}
+                            
                             <p className="text-xs text-gray-500 mt-1">
                               Sélectionnez toutes les spécialités dentaires additionnelles que ce médecin peut pratiquer. La spécialité principale ne peut pas être désélectionnée.
                             </p>
