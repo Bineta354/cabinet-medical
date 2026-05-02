@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import useRdvData from '../../hooks/useRdvData';
 import { appointmentService } from '../../lib/services'; // Import appointmentService for creation
+import motifsConsultationService from '../../services/motifsConsultationService';
 
 const PriseRendezVous = () => {
   // Local states for filtering and form
@@ -17,6 +18,7 @@ const PriseRendezVous = () => {
     motif_detaille: ''
   });
   const [showModal, setShowModal] = useState(false);
+  const [motifsList, setMotifsList] = useState([]);
 
   // Use the new usePriseRendezVousData hook
   const { 
@@ -27,6 +29,23 @@ const PriseRendezVous = () => {
     loading: dataLoading, // Renamed to avoid conflict with local loading if any
     error 
   } = useRdvData(selectedSpecialite, selectedMonth);
+
+  // Charger les motifs de consultation
+  useEffect(() => {
+    const loadMotifs = async () => {
+      try {
+        const motifs = await motifsConsultationService.getMotifsForSelect('Dentiste');
+        setMotifsList(motifs);
+      } catch (error) {
+        console.error('Erreur lors du chargement des motifs:', error);
+        // Utiliser les motifs par défaut en cas d'erreur
+        const defaultMotifs = motifsConsultationService.getDefaultMotifsForSelect();
+        setMotifsList(defaultMotifs);
+      }
+    };
+
+    loadMotifs();
+  }, []);
 
   // No need for fetchInitialData, fetchMedecins, fetchAppointments or their useEffects here,
   // as the usePriseRendezVousData hook handles all that.
@@ -327,14 +346,19 @@ const PriseRendezVous = () => {
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Motif *
                   </label>
-                  <input
-                    type="text"
+                  <select
                     required
                     value={newAppointment.motif}
                     onChange={(e) => setNewAppointment({...newAppointment, motif: e.target.value})}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="Motif du rendez-vous"
-                  />
+                  >
+                    <option value="">Sélectionner un motif...</option>
+                    {motifsList.map((motif) => (
+                      <option key={motif.value} value={motif.value}>
+                        {motif.label}
+                      </option>
+                    ))}
+                  </select>
                 </div>
 
                 <div>

@@ -34,10 +34,42 @@ export const useTypesActes = () => {
         );
       }
       
-      setActes(filteredData);
+      // Si la liste est vide, utiliser des actes par défaut
+      if (!filteredData || filteredData.length === 0) {
+        const defaultActes = [
+          { id: 1, nom: 'Examen général', description: 'Examen clinique complet', tarif_defaut: 5000, specialites_data: [] },
+          { id: 2, nom: 'Consultation dentaire', description: 'Consultation dentaire de base', tarif_defaut: 10000, specialites_data: [] },
+          { id: 3, nom: 'Détartrage', description: 'Nettoyage dentaire professionnel', tarif_defaut: 15000, specialites_data: [] },
+          { id: 4, nom: 'Extraction dentaire', description: 'Extraction de dent simple', tarif_defaut: 20000, specialites_data: [] },
+          { id: 5, nom: 'Obturation', description: 'Plombage dentaire', tarif_defaut: 25000, specialites_data: [] },
+          { id: 6, nom: 'Radiographie dentaire', description: 'Radio dentaire panoramique', tarif_defaut: 8000, specialites_data: [] },
+          { id: 7, nom: 'Soins canalaires', description: 'Traitement endodontique', tarif_defaut: 50000, specialites_data: [] },
+          { id: 8, nom: 'Couronne dentaire', description: 'Pose de couronne', tarif_defaut: 80000, specialites_data: [] },
+          { id: 9, nom: 'Prothèse amovible', description: 'Dentier', tarif_defaut: 120000, specialites_data: [] },
+          { id: 10, nom: 'Implant dentaire', description: 'Pose d\'implant', tarif_defaut: 200000, specialites_data: [] }
+        ];
+        setActes(defaultActes);
+      } else {
+        // S'assurer que "Examen général" est en premier
+        const examenGeneral = filteredData.find(a => a.nom === 'Examen général');
+        const otherActes = filteredData.filter(a => a.nom !== 'Examen général');
+        if (examenGeneral) {
+          setActes([examenGeneral, ...otherActes]);
+        } else {
+          // Si "Examen général" n'existe pas, l'ajouter en premier
+          const newActe = { id: 999, nom: 'Examen général', description: 'Examen clinique complet', tarif_defaut: 5000, specialites_data: [] };
+          setActes([newActe, ...filteredData]);
+        }
+      }
     } catch (err) {
       console.error('Erreur chargement actes:', err);
       setError(err);
+      // En cas d'erreur, utiliser des actes par défaut
+      const defaultActes = [
+        { id: 1, nom: 'Examen général', description: 'Examen clinique complet', tarif_defaut: 5000, specialites_data: [] },
+        { id: 2, nom: 'Consultation dentaire', description: 'Consultation dentaire de base', tarif_defaut: 10000, specialites_data: [] }
+      ];
+      setActes(defaultActes);
     } finally {
       setLoading(false);
     }

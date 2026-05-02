@@ -1030,6 +1030,7 @@ minute: '2-digit'
 )}
 </div>
 <div className="text-right">
+{currentPatient.status !== 'en_route' && (
 <span className={`px-3 py-1 rounded-full text-sm font-medium ${
 currentPatient.status === 'arrive' ? 'bg-orange-100 text-orange-800' :
 currentPatient.status === 'in_consultation' ? 'bg-green-100 text-green-800' :
@@ -1039,6 +1040,7 @@ currentPatient.status === 'in_consultation' ? 'bg-green-100 text-green-800' :
 currentPatient.status === 'in_consultation' ? '🩺 En consultation' :
 currentPatient.status}
 </span>
+)}
 {currentPatient.temps_attente_minutes > 0 && (
 <p className="text-xs text-gray-500 mt-1">
 {Math.round(currentPatient.temps_attente_minutes)}min d'attente

@@ -1,6 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
+import { useSearchParams } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
+import motifsConsultationService from '../services/motifsConsultationService';
+import patientStatusService from '../services/patientStatusService';
 import { 
   Calendar, 
   Clock, 
@@ -21,9 +24,11 @@ import {
 
 const AppointmentsPage = () => {
   const { currentUser, userProfile } = useAuth();
+  const [searchParams] = useSearchParams();
   const [appointments, setAppointments] = useState([]);
   const [patients, setPatients] = useState([]);
   const [doctors, setDoctors] = useState([]);
+  const [motifsList, setMotifsList] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
@@ -42,7 +47,14 @@ const AppointmentsPage = () => {
 
   useEffect(() => {
     fetchData();
-  }, [selectedDate]);
+    
+    // Vérifier si un patientId est passé en paramètre
+    const patientId = searchParams.get('patientId');
+    if (patientId) {
+      setFormData(prev => ({ ...prev, patient_id: patientId }));
+      setShowForm(true);
+    }
+  }, [selectedDate, searchParams]);
 
   const fetchData = async () => {
     try {
@@ -50,7 +62,8 @@ const AppointmentsPage = () => {
       await Promise.all([
         fetchAppointments(),
         fetchPatients(),
-        fetchDoctors()
+        fetchDoctors(),
+        loadMotifs()
       ]);
     } catch (error) {
       console.error('Erreur lors du chargement des données:', error);
@@ -108,6 +121,18 @@ const AppointmentsPage = () => {
       setDoctors(data || []);
     } catch (error) {
       console.error('Erreur lors du chargement des médecins:', error);
+    }
+  };
+
+  const loadMotifs = async () => {
+    try {
+      const motifs = await motifsConsultationService.getMotifsForSelect('Dentiste');
+      setMotifsList(motifs);
+    } catch (error) {
+      console.error('Erreur lors du chargement des motifs:', error);
+      // Utiliser les motifs par défaut en cas d'erreur
+      const defaultMotifs = motifsConsultationService.getDefaultMotifsForSelect();
+      setMotifsList(defaultMotifs);
     }
   };
 
@@ -261,6 +286,47 @@ const AppointmentsPage = () => {
       }
       
       console.log('✅ Rendez-vous enregistré avec succès:', result);
+      
+      // Mettre à jour le statut du patient si c'est une création
+      if (!editingAppointment && result && result.length > 0) {
+        const appointment = result[0];
+        console.log('🔄 Mise à jour statut patient pour nouveau rendez-vous...');
+        try {
+          const statusUpdate = await patientStatusService.updatePatientStatusOnAppointment(
+            appointment.patient_id, 
+            appointment
+          );
+          
+          if (statusUpdate.patientWasInactive) {
+            console.log('📋 Patient était inactif et a été activé automatiquement');
+            // TODO: Afficher une notification à l'utilisateur
+            alert('Le patient était inactif et a été activé automatiquement.');
+          }
+        } catch (statusError) {
+          console.error('❌ Erreur mise à jour statut patient:', statusError);
+          // Ne pas bloquer le processus si la mise à jour échoue
+        }
+      }
+      
+      // Envoyer une notification
+      if (result && result.length > 0) {
+        const appointment = result[0];
+        if (appointment.patient && appointment.medecin) {
+          console.log('📢 Envoi de notification pour le rendez-vous...');
+          try {
+            await notificationService.notifyNewAppointment({
+              patient: appointment.patient,
+              medecin: appointment.medecin,
+              dateHeure: appointment.date_heure,
+              motif: appointment.motif
+            });
+            console.log('✅ Notification envoyée avec succès');
+          } catch (notifError) {
+            console.error('❌ Erreur lors de l\'envoi de la notification:', notifError);
+            // Ne pas bloquer le processus si la notification échoue
+          }
+        }
+      }
       
       // Fermer le formulaire et actualiser
       setShowForm(false);
@@ -622,13 +688,18 @@ const AppointmentsPage = () => {
               
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Motif</label>
-                <input
-                  type="text"
+                <select
                   value={formData.motif}
                   onChange={(e) => setFormData({...formData, motif: e.target.value})}
-                  placeholder="Motif de la consultation"
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-medical-primary focus:border-transparent"
-                />
+                >
+                  <option value="">Sélectionner un motif...</option>
+                  {motifsList.map((motif) => (
+                    <option key={motif.value} value={motif.value}>
+                      {motif.label}
+                    </option>
+                  ))}
+                </select>
               </div>
               
               <div>

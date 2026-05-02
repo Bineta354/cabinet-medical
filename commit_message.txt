@@ -1,0 +1,13 @@
+feat: refonte motifs consultation et gestion statuts patients
+
+- Création table motifs_consultation avec 18 motifs dentaires
+- Service centralisé motifsConsultationService avec fallback
+- Listes déroulantes unifiées dans tous les formulaires RV
+- Nouveau service patientStatusService pour statuts unifiés
+- Activation automatique patients inactifs lors création RV
+- Synchronisation waiting_queue avec appointments
+- Scripts d'analyse et outils de débogage
+- Composant DatabaseCheck pour administration
+- Résolution incohérences statuts patients
+
+BREAKING CHANGE: Les motifs sont maintenant chargés depuis la base de données
