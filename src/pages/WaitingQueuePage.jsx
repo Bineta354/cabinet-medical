@@ -185,7 +185,7 @@ const WaitingQueuePage = () => {
             hour: '2-digit', 
             minute: '2-digit' 
           }),
-          statut: item.status,
+          status: item.status,
           priorite: item.priorite || 'normale',
           motif: item.motif || 'Consultation',
           tempsAttente: Math.floor((new Date() - new Date(item.arrived_at || item.created_at || item.updated_at)) / 60000),
@@ -193,12 +193,12 @@ const WaitingQueuePage = () => {
         };
       }) || [];
 
-      // Déduplication par appointment_id si dispo, sinon par (patient_id, medecin_id, statut)
+      // Déduplication par appointment_id si dispo, sinon par (patient_id, medecin_id, status)
       const uniqueMap = new Map();
       for (const it of rawPatientsData) {
         const key = it.appointment_id
           ? `apt:${it.appointment_id}`
-          : `p:${it.patient_id}-m:${it.medecin_id}-s:${it.statut}`;
+          : `p:${it.patient_id}-m:${it.medecin_id}-s:${it.status}`;
         if (!uniqueMap.has(key)) uniqueMap.set(key, it);
       }
       const patientsData = Array.from(uniqueMap.values());
@@ -238,7 +238,7 @@ const WaitingQueuePage = () => {
         date_heure: apt.date_heure,
         motif: apt.motif || 'Consultation',
         medecin_id: apt.medecin_id,
-        statut: apt.statut || 'programme'
+        status: apt.status || 'programme'
       })) || [];
 
       setAppointments(transformedAppointments);
@@ -318,7 +318,7 @@ const WaitingQueuePage = () => {
             hour: '2-digit', 
             minute: '2-digit' 
           }),
-          statut: item.status,
+          status: item.status,
           priorite: item.priorite || 'normale',
           motif: item.motif || 'Consultation',
           tempsAttente: Math.floor((new Date() - new Date(item.created_at)) / 60000),
@@ -329,7 +329,7 @@ const WaitingQueuePage = () => {
       for (const it of rawPatientsData) {
         const key = it.appointment_id
           ? `apt:${it.appointment_id}`
-          : `p:${it.patient_id}-m:${it.medecin_id}-s:${it.statut}`;
+          : `p:${it.patient_id}-m:${it.medecin_id}-s:${it.status}`;
         if (!uniqueMap2.has(key)) uniqueMap2.set(key, it);
       }
       const patientsData = Array.from(uniqueMap2.values());
@@ -362,7 +362,7 @@ const WaitingQueuePage = () => {
         date_heure: apt.date_heure,
         motif: apt.motif || 'Consultation',
         medecin_id: apt.medecin_id,
-        statut: apt.statut || 'programme'
+        status: apt.status || 'programme'
       })) || [];
       console.log('🔄 [WaitingQueue] Rendez-vous transformés:', transformedAppointments.length, 'rendez-vous');
 
@@ -513,7 +513,7 @@ const WaitingQueuePage = () => {
           hour: '2-digit', 
           minute: '2-digit' 
         }),
-        statut: waitingQueueItem.status,
+        status: waitingQueueItem.status,
         priorite: waitingQueueItem.priorite || 'normale',
         motif: waitingQueueItem.motif || 'Consultation',
         tempsAttente: 0,
@@ -567,7 +567,7 @@ const WaitingQueuePage = () => {
       // Mettre à jour l'état local au lieu de recharger toute la page
       setPatients(prev => prev.map(patient => 
         patient.id === patientId 
-          ? { ...patient, statut: 'in_consultation' }
+          ? { ...patient, status: 'in_consultation' }
           : patient
       ));
       
@@ -658,7 +658,7 @@ const WaitingQueuePage = () => {
       // Mettre à jour l'état local au lieu de recharger toute la page
       setPatients(prev => prev.map(patient => 
         patient.id === patientId 
-          ? { ...patient, statut: 'present' }
+          ? { ...patient, status: 'present' }
           : patient
       ));
       
@@ -698,7 +698,7 @@ const WaitingQueuePage = () => {
       // Mettre à jour l'état local
       setPatients(prev => prev.map(patient => 
         patient.id === patientId 
-          ? { ...patient, statut: 'present' }
+          ? { ...patient, status: 'present' }
           : patient
       ));
       
@@ -769,14 +769,15 @@ const WaitingQueuePage = () => {
     }
   };
 
-  const getStatusBadge = (statut) => {
+  const getStatusBadge = (status) => {
     const statusClasses = {
       waiting: 'bg-yellow-100 text-yellow-800',
       in_consultation: 'bg-blue-100 text-blue-800',
       finished: 'bg-green-100 text-green-800',
       late: 'bg-orange-100 text-orange-800',
       emergency: 'bg-red-100 text-red-800',
-      present: 'bg-purple-100 text-purple-800'
+      present: 'bg-blue-100 text-blue-800',
+      called: 'bg-purple-100 text-purple-800'
     };
     
     const statusLabels = {
@@ -785,12 +786,13 @@ const WaitingQueuePage = () => {
       finished: 'Terminé',
       late: 'En retard',
       emergency: 'Urgence',
-      present: 'Présent'
+      present: 'Présent',
+      called: 'Appelé'
     };
     
     return (
-      <span className={`px-2 py-1 rounded-full text-xs font-medium ${statusClasses[statut] || statusClasses.waiting}`}>
-        {statusLabels[statut] || statut}
+      <span className={`px-2 py-1 rounded-full text-xs font-medium ${statusClasses[status] || statusClasses.waiting}`}>
+        {statusLabels[status] || status}
       </span>
     );
   };
@@ -817,12 +819,12 @@ const WaitingQueuePage = () => {
 
   // Filtrer les patients selon le médecin sélectionné
   const patientsEnAttente = selectedDoctor 
-    ? patients.filter(p => (p.statut === 'waiting' || p.statut === 'called') && p.medecin_id === selectedDoctor.id)
-    : patients.filter(p => p.statut === 'waiting' || p.statut === 'called');
+    ? patients.filter(p => (p.status === 'waiting' || p.status === 'called') && p.medecin_id === selectedDoctor.id)
+    : patients.filter(p => p.status === 'waiting' || p.status === 'called');
     
   const patientsEnConsultation = selectedDoctor 
-    ? patients.filter(p => p.statut === 'in_consultation' && p.medecin_id === selectedDoctor.id)
-    : patients.filter(p => p.statut === 'in_consultation');
+    ? patients.filter(p => p.status === 'in_consultation' && p.medecin_id === selectedDoctor.id)
+    : patients.filter(p => p.status === 'in_consultation');
 
   // Filtrer les patients en attente par recherche
   const filteredPatientsEnAttente = patientsEnAttente.filter(patient =>
@@ -1078,9 +1080,9 @@ const WaitingQueuePage = () => {
             {filteredPatientsEnAttente.map((patient, index) => {
               const doctor = doctors.find(d => d.id === patient.medecin_id);
               const isFromAppointment = isPatientPresent(patient.id);
-              const isCalled = patient.statut === 'called';
+              const isCalled = patient.status === 'called';
               
-              // Déterminer les classes CSS selon le statut
+              // Déterminer les classes CSS selon le status
               let cardClass = 'border-gray-200';
               let avatarClass = 'bg-gradient-to-br from-medical-primary to-medical-secondary';
               

@@ -13,6 +13,10 @@ export const NOTIFICATION_TYPES = {
   PATIENT_ADDED: 'patient_added',
   URGENCY: 'urgency',
   PATIENT_STATUS_CHANGE: 'patient_status_change',
+  // Notifications rendez-vous
+  NEW_APPOINTMENT: 'new_appointment',
+  APPOINTMENT_CANCELLED: 'appointment_cancelled',
+  APPOINTMENT_MODIFIED: 'appointment_modified',
   // Notifications caissier
   CASHIER_NEW_INVOICE: 'cashier_new_invoice',
   CASHIER_CONSULTATION_FINISHED: 'cashier_consultation_finished',
@@ -59,6 +63,19 @@ export const sendNotification = async (type, fromUserId, toUserId, consultationI
         message = `Patient urgent: ${patientName}`;
         titre = 'URGENT';
         priorite = 'urgente';
+        break;
+      case NOTIFICATION_TYPES.NEW_APPOINTMENT:
+        message = `Nouveau rendez-vous pour ${patientName} - ${metadata.motif || 'Consultation'} le ${metadata.date || ''}`;
+        titre = 'Nouveau Rendez-vous';
+        break;
+      case NOTIFICATION_TYPES.APPOINTMENT_CANCELLED:
+        message = `Rendez-vous de ${patientName} annulé`;
+        titre = 'Rendez-vous Annulé';
+        priorite = 'haute';
+        break;
+      case NOTIFICATION_TYPES.APPOINTMENT_MODIFIED:
+        message = `Rendez-vous de ${patientName} modifié`;
+        titre = 'Rendez-vous Modifié';
         break;
       default:
         message = `Notification concernant ${patientName}`;
@@ -518,43 +535,69 @@ export const notificationService = {
     }
   },
 
-  // Notifier les caissiers quand une consultation est terminée
-  async notifyCashierConsultationFinished(patientId, patientName, doctorName, tenantId = null) {
+  // Notifier les médecins d'un nouveau rendez-vous
+  async notifyNewAppointment(doctorId, secretaryId, patientId, patientName, motif, dateHeure, tenantId = null) {
     try {
-      // Récupérer tous les caissiers actifs
-      const { data: cashiers, error: usersError } = await supabase
-        .from('users')
-        .select('id')
-        .or('role.eq.caissier,role.eq.cashier')
-        .eq('actif', true);
+      const formattedDate = new Date(dateHeure).toLocaleString('fr-FR', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
 
-      if (usersError) throw usersError;
-
-      const rows = (cashiers || []).map((u) => ({
-        caissier_id: u.id,
-        patient_id: patientId,
-        type_notification: NOTIFICATION_TYPES.CASHIER_CONSULTATION_FINISHED,
-        titre: 'Consultation Terminée',
-        message: `Consultation de ${patientName} avec Dr. ${doctorName} terminée. Préparez le paiement.`,
-        priorite: 'normale',
-        lu: false,
-        tenant_id: tenantId,
-        metadata: JSON.stringify({ patientId, patientName, doctorName })
-      }));
-
-      if (rows.length === 0) return [];
-
-      const { data, error } = await supabase
-        .from('notifications_medecin_secretaire')
-        .insert(rows)
-        .select();
-
-      if (error) throw error;
-      
-      console.log('✅ [NotificationService] Notifications caissier (consultation terminée):', data);
-      return data;
+      return await sendNotification(
+        NOTIFICATION_TYPES.NEW_APPOINTMENT,
+        secretaryId,
+        doctorId,
+        null,
+        patientName,
+        {
+          patientId,
+          motif,
+          date: formattedDate,
+          dateHeure
+        },
+        tenantId
+      );
     } catch (error) {
-      console.error('❌ [NotificationService] Erreur notification caissier consultation terminée:', error);
+      console.error('❌ [NotificationService] Erreur notification nouveau rendez-vous:', error);
+      throw error;
+    }
+  },
+
+  // Notifier l'annulation d'un rendez-vous
+  async notifyAppointmentCancelled(doctorId, secretaryId, patientId, patientName, tenantId = null) {
+    try {
+      return await sendNotification(
+        NOTIFICATION_TYPES.APPOINTMENT_CANCELLED,
+        secretaryId,
+        doctorId,
+        null,
+        patientName,
+        { patientId },
+        tenantId
+      );
+    } catch (error) {
+      console.error('❌ [NotificationService] Erreur notification annulation rendez-vous:', error);
+      throw error;
+    }
+  },
+
+  // Notifier la modification d'un rendez-vous
+  async notifyAppointmentModified(doctorId, secretaryId, patientId, patientName, tenantId = null) {
+    try {
+      return await sendNotification(
+        NOTIFICATION_TYPES.APPOINTMENT_MODIFIED,
+        secretaryId,
+        doctorId,
+        null,
+        patientName,
+        { patientId },
+        tenantId
+      );
+    } catch (error) {
+      console.error('❌ [NotificationService] Erreur notification modification rendez-vous:', error);
       throw error;
     }
   },
@@ -645,4 +688,21 @@ export const notificationService = {
       throw error;
     }
   }
+};
+
+export default {
+  sendNotification,
+  notifyPatientCalled: notificationService.notifyPatientCalled,
+  notifyPatientEntered: notificationService.notifyPatientEntered,
+  notifyConsultationFinished: notificationService.notifyConsultationFinished,
+  notifyDoctorRequest: notificationService.notifyDoctorRequest,
+  notifyPatientAdded: notificationService.notifyPatientAdded,
+  notifyUrgency: notificationService.notifyUrgency,
+  notifyNewAppointment: notificationService.notifyNewAppointment,
+  notifyAppointmentCancelled: notificationService.notifyAppointmentCancelled,
+  notifyAppointmentModified: notificationService.notifyAppointmentModified,
+  notifyCashierNewInvoice: notificationService.notifyCashierNewInvoice,
+  notifyCashierConsultationFinished: notificationService.notifyCashierConsultationFinished,
+  notifyCashierPaymentMade: notificationService.notifyCashierPaymentMade,
+  notifyCashierCashDiscrepancy: notificationService.notifyCashierCashDiscrepancy
 };

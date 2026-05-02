@@ -3,6 +3,8 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { supabase } from '../../lib/supabase';
 import { unifiedNotificationService } from '../../services/unifiedNotificationService';
+import notificationService from '../../services/notificationService';
+import motifsConsultationService from '../../services/motifsConsultationService';
 import { 
   User, 
   Calendar, 
@@ -37,10 +39,12 @@ const FichePatientRdv = () => {
   const [selectedPatient, setSelectedPatient] = useState(null);
   const [consultations, setConsultations] = useState([]);
   const [appointments, setAppointments] = useState([]);
+  const [medecins, setMedecins] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [showNewAppointment, setShowNewAppointment] = useState(false);
   const [showConsultationHistory, setShowConsultationHistory] = useState(false);
+  const [motifsList, setMotifsList] = useState([]);
   
   const [appointmentForm, setAppointmentForm] = useState({
     medecin_id: '',
@@ -53,6 +57,8 @@ const FichePatientRdv = () => {
 
   useEffect(() => {
     fetchPatients();
+    fetchMedecins();
+    loadMotifs();
     
     // Si un ID patient est fourni dans l'URL
     const patientId = searchParams.get('id');
@@ -74,6 +80,33 @@ const FichePatientRdv = () => {
       console.error('Erreur lors du chargement des patients:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchMedecins = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('users')
+        .select('id, nom, prenom, specialite')
+        .eq('role', 'doctor')
+        .order('nom', { ascending: true });
+
+      if (error) throw error;
+      setMedecins(data || []);
+    } catch (error) {
+      console.error('Erreur lors du chargement des médecins:', error);
+    }
+  };
+
+  const loadMotifs = async () => {
+    try {
+      const motifs = await motifsConsultationService.getMotifsForSelect('Dentiste');
+      setMotifsList(motifs);
+    } catch (error) {
+      console.error('Erreur lors du chargement des motifs:', error);
+      // Utiliser les motifs par défaut en cas d'erreur
+      const defaultMotifs = motifsConsultationService.getDefaultMotifsForSelect();
+      setMotifsList(defaultMotifs);
     }
   };
 
@@ -151,6 +184,23 @@ const FichePatientRdv = () => {
 
       if (error) throw error;
       
+      // Envoyer une notification au médecin
+      if (appointmentForm.medecin_id && currentUser.role === 'secretary') {
+        try {
+          await notificationService.notifyNewAppointment(
+            appointmentForm.medecin_id,
+            currentUser.id,
+            selectedPatient.id,
+            `${selectedPatient.prenom} ${selectedPatient.nom}`,
+            appointmentForm.motif,
+            appointmentForm.date_heure
+          );
+        } catch (notifError) {
+          console.error('Erreur lors de l\'envoi de la notification:', notifError);
+          // Ne pas bloquer le processus si la notification échoue
+        }
+      }
+      
       setShowNewAppointment(false);
       setAppointmentForm({
         medecin_id: '',
@@ -163,6 +213,9 @@ const FichePatientRdv = () => {
       
       // Recharger les rendez-vous
       loadPatientData(selectedPatient.id);
+      
+      // Message de succès
+      unifiedNotificationService.success('Rendez-vous créé avec succès');
       
     } catch (error) {
       console.error('Erreur lors de la création du rendez-vous:', error);
@@ -442,6 +495,23 @@ const FichePatientRdv = () => {
             
             <form onSubmit={handleNewAppointment} className="p-6 space-y-4">
               <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Médecin *</label>
+                <select
+                  value={appointmentForm.medecin_id}
+                  onChange={(e) => setAppointmentForm({...appointmentForm, medecin_id: e.target.value})}
+                  required
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-medical-primary focus:border-transparent"
+                >
+                  <option value="">Sélectionner un médecin...</option>
+                  {medecins.map((medecin) => (
+                    <option key={medecin.id} value={medecin.id}>
+                      Dr. {medecin.prenom} {medecin.nom} {medecin.specialite && `- ${medecin.specialite}`}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              
+              <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Date et heure *</label>
                 <input
                   type="datetime-local"
@@ -453,14 +523,19 @@ const FichePatientRdv = () => {
               </div>
               
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Motif</label>
-                <input
-                  type="text"
+                <label className="block text-sm font-medium text-gray-700 mb-1">Motif de la consultation</label>
+                <select
                   value={appointmentForm.motif}
                   onChange={(e) => setAppointmentForm({...appointmentForm, motif: e.target.value})}
-                  placeholder="Motif de la consultation"
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-medical-primary focus:border-transparent"
-                />
+                >
+                  <option value="">Sélectionner un motif...</option>
+                  {motifsList.map((motif) => (
+                    <option key={motif.value} value={motif.value}>
+                      {motif.label}
+                    </option>
+                  ))}
+                </select>
               </div>
               
               <div>

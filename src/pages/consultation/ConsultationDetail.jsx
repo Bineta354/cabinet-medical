@@ -81,8 +81,20 @@ const ConsultationDetail = () => {
     refetchFunctions
   } = useConsultationData(id);
 
-  const [activeTab, setActiveTab] = useState('antecedents'); // Antécédents par défaut
+  const [activeTab, setActiveTab] = useState('examen'); // Examen général par défaut (obligatoire)
   const [syntheseMode, setSyntheseMode] = useState('current'); // 'current' ou 'history'
+
+  // Fonction pour gérer le changement d'onglet avec validation
+  const handleTabChange = (tabId) => {
+    // Si on quitte l'onglet examen, vérifier qu'il est rempli
+    if (activeTab === 'examen' && tabId !== 'examen') {
+      if (!signesCliniques || signesCliniques.length === 0) {
+        showError("Vous devez renseigner l'onglet 'Examen général' avant de passer à un autre onglet.");
+        return;
+      }
+    }
+    setActiveTab(tabId);
+  };
   const [showDocumentsModal, setShowDocumentsModal] = useState(false);
   const [documentsStatus, setDocumentsStatus] = useState('none'); // 'none', 'new_today', 'old_only'
   const [showDevisModal, setShowDevisModal] = useState(false);
@@ -157,6 +169,9 @@ const ConsultationDetail = () => {
       if (validTabs.includes(tabParam)) {
         setActiveTab(tabParam);
       }
+    } else {
+      // Si aucun paramètre tab, s'assurer que l'onglet examen est actif par défaut
+      setActiveTab('examen');
     }
   }, [searchParams]);
 
@@ -385,9 +400,9 @@ const ConsultationDetail = () => {
   const isDentist = hasRole('doctor') && userProfile?.specialite?.toLowerCase() === 'dentiste';
 
   const tabs = [
+    { id: 'examen', name: 'Examen Général', icon: Eye },
     { id: 'antecedents', name: 'Antécédents', icon: User },
     { id: 'constantes', name: 'Constantes', icon: Activity },
-    { id: 'examen', name: 'Examen Général', icon: Eye },
     { id: 'appareils', name: 'Appareils', icon: Heart },
     { id: 'diagnostics', name: 'Diagnostics', icon: FileText },
     ...(isDentist ? [{ id: 'dental', name: 'Schéma Dentaire', icon: Smile }] : []),
@@ -521,10 +536,10 @@ const ConsultationDetail = () => {
         <div className="flex flex-col space-y-2">
           {/* Rangée 1 */}
           <nav className="-mb-px flex space-x-8 flex-wrap">
-            {tabs.filter(tab => ['antecedents', 'constantes', 'examen', 'appareils', 'diagnostics'].includes(tab.id)).map((tab) => (
+            {tabs.filter(tab => ['examen', 'antecedents', 'constantes', 'appareils', 'diagnostics'].includes(tab.id)).map((tab) => (
               <button
                 key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
+                onClick={() => handleTabChange(tab.id)}
                 className={`py-2 px-1 border-b-2 font-medium text-sm flex items-center ${activeTab === tab.id
                   ? 'border-blue-500 text-blue-600'
                   : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
@@ -541,7 +556,7 @@ const ConsultationDetail = () => {
             {tabs.filter(tab => ['actes', 'ordonnances', 'certificats', 'synthese', 'dental'].includes(tab.id)).map((tab) => (
               <button
                 key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
+                onClick={() => handleTabChange(tab.id)}
                 className={`py-2 px-1 border-b-2 font-medium text-sm flex items-center ${activeTab === tab.id
                   ? 'border-blue-500 text-blue-600'
                   : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
