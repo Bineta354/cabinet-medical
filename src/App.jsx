@@ -77,6 +77,7 @@ const RootRedirect = () => {
 // Pages principales (chargement prioritaire)
 const TestSimple = lazy(() => import('./pages/TestSimple'));
 const TestAuth = lazy(() => import('./pages/TestAuth'));
+const DatabaseCheck = lazy(() => import('./components/admin/DatabaseCheck'));
 const TestSpecialityFilter = lazy(() => import('./pages/test/TestSpecialityFilter'));
 const CabinetWelcome = lazy(() => import('./pages/CabinetWelcome'));
 const CabinetWelcomePublic = lazy(() => import('./pages/CabinetWelcomePublic'));
@@ -329,10 +330,11 @@ const AppContent = () => {
   // Composant pour initialiser la configuration de spécialité au démarrage
   const SpecialityConfigInitializer = () => {
     const { currentUser } = useAuth();
+    const initializedRef = React.useRef(false);
     
     React.useEffect(() => {
-      // Initialiser la configuration seulement si l'utilisateur est connecté
-      if (currentUser) {
+      // Initialiser la configuration seulement si l'utilisateur est connecté et pas déjà initialisé
+      if (currentUser && !initializedRef.current) {
         console.log(`[SPECIALITY_CONFIG] Initialisation de la configuration de spécialité au démarrage de l'application`);
         getCurrentSpeciality()
           .then(config => {
@@ -341,6 +343,7 @@ const AppContent = () => {
               specialite_nom: config.specialite?.nom || 'Mode généraliste',
               user_email: currentUser.email
             });
+            initializedRef.current = true;
           })
           .catch(error => {
             console.error(`[SPECIALITY_CONFIG] Erreur lors de l'initialisation de la configuration:`, error);
@@ -523,6 +526,11 @@ const AppContent = () => {
         } />
         
         {/* Routes principales avec lazy loading */}
+        <Route path="/database-check" element={
+          <ProtectedRoute allowedRoles={[ROLES.ADMIN, ROLES.DOCTOR]}>
+            <LazyPageWrapper Component={DatabaseCheck} message="Chargement du diagnostic base de données..." />
+          </ProtectedRoute>
+        } />
         <Route path="/patients" element={
           <ProtectedRoute>
             <LazyPageWrapper Component={PatientsPage} message="Chargement des patients..." />

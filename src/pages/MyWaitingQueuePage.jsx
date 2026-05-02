@@ -126,7 +126,7 @@ const MyWaitingQueuePage = () => {
         
         // Si c'est une notification que le patient est en route
         if (notification.type_notification === 'patient_on_way') {
-          // Mettre à jour le statut du patient vers 'present'
+          // Mettre à jour le status du patient vers 'present'
           const waitingQueueId = notification.waiting_queue_id;
           if (waitingQueueId) {
             handlePatientAction(waitingQueueId, 'receive');
@@ -381,7 +381,7 @@ const MyWaitingQueuePage = () => {
           return;
       }
 
-      console.log('🔄 [MyWaitingQueue] Action patient:', action, 'pour patient:', patientId, 'nouveau statut:', newStatus);
+      console.log('🔄 [MyWaitingQueue] Action patient:', action, 'pour patient:', patientId, 'nouveau status:', newStatus);
       
       const { error: updateError } = await supabase
         .from('waiting_queue')
@@ -392,12 +392,22 @@ const MyWaitingQueuePage = () => {
         .eq('id', patientId);
 
       if (updateError) {
-        console.error('❌ [MyWaitingQueue] Erreur mise à jour statut:', updateError);
+        console.error('❌ [MyWaitingQueue] Erreur mise à jour status:', updateError);
         throw updateError;
       }
       
-      console.log('✅ [MyWaitingQueue] Statut mis à jour:', patientId, '->', newStatus);
-      fetchWaitingQueue();
+      console.log('✅ [MyWaitingQueue] Status mis à jour:', patientId, '->', newStatus);
+      
+      // Forcer le rafraîchissement immédiat pour synchronisation
+      await fetchWaitingQueue();
+      
+      // Notifier les autres composants du changement
+      if (window.dispatchEvent) {
+        window.dispatchEvent(new CustomEvent('patientStatusChanged', {
+          detail: { patientId, newStatus, action }
+        }));
+      }
+      
     } catch (error) {
       console.error('❌ [MyWaitingQueue] Erreur lors de l\'action sur le patient:', error);
     }
@@ -1004,13 +1014,19 @@ const MyWaitingQueuePage = () => {
                     </button>
                     <button
                       onClick={() => handlePatientAction(patient.id, 'consultation')}
-                      disabled={consultationEnCours}
+                      disabled={consultationEnCours || patient.status === 'en_route'}
                       className={`btn btn-success btn-sm flex items-center gap-2 ${
-                        consultationEnCours ? 'opacity-50 cursor-not-allowed' : ''
+                        consultationEnCours || patient.status === 'en_route' 
+                          ? 'opacity-50 cursor-not-allowed' : ''
                       }`}
+                      title={
+                        consultationEnCours ? "Consultation en cours" : 
+                        patient.status === 'en_route' ? "Patient déjà en route vers vous" :
+                        "Commencer la consultation"
+                      }
                     >
                       <Stethoscope className="w-4 h-4" />
-                      Commencer
+                      {patient.status === 'en_route' ? 'En route' : 'Commencer'}
                     </button>
                   </div>
                 </div>

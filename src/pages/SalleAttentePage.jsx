@@ -66,7 +66,7 @@ const SalleAttentePage = () => {
     try {
       const today = new Date().toISOString().split('T')[0];
 
-      // 1) Récupérer la file d'attente sans jointures imbriquées - inclure tous les statuts pertinents
+      // 1) Récupérer la file d'attente sans jointures imbriquées - inclure tous les status pertinents
       const { data: queueData, error: queueError } = await supabase
         .from('waiting_queue')
         .select('*')
@@ -165,7 +165,7 @@ const SalleAttentePage = () => {
       addNotification(`Patient ${newStatus === 'in_consultation' ? 'en consultation' : 'appelé'}`, 'success');
       fetchPatientsEnAttente();
     } catch (error) {
-      console.error('Erreur lors de la mise à jour du statut:', error);
+      console.error('Erreur lors de la mise à jour du status:', error);
       addNotification('Erreur lors de la mise à jour', 'error');
     }
   };
@@ -501,7 +501,7 @@ const SalleAttentePage = () => {
                       <span className="ml-2">{selectedPatient.motif_consultation || 'Non spécifié'}</span>
                     </div>
                     <div>
-                      <span className="font-medium text-gray-500">Statut:</span>
+                      <span className="font-medium text-gray-500">Status:</span>
                       <span className="ml-2">{getStatusBadge(selectedPatient.status)}</span>
                     </div>
                   </div>

@@ -4,6 +4,7 @@ import { useSearchParams } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import motifsConsultationService from '../services/motifsConsultationService';
 import patientStatusService from '../services/patientStatusService';
+import { sendNotification, NOTIFICATION_TYPES } from '../lib/notifications';
 import { 
   Calendar, 
   Clock, 
@@ -314,13 +315,20 @@ const AppointmentsPage = () => {
         if (appointment.patient && appointment.medecin) {
           console.log('📢 Envoi de notification pour le rendez-vous...');
           try {
-            await notificationService.notifyNewAppointment({
-              patient: appointment.patient,
-              medecin: appointment.medecin,
-              dateHeure: appointment.date_heure,
-              motif: appointment.motif
-            });
-            console.log('✅ Notification envoyée avec succès');
+            // Envoyer notification de nouveau rendez-vous
+            await sendNotification(
+              NOTIFICATION_TYPES.NEW_APPOINTMENT,
+              currentUser?.id, // Système comme expéditeur
+              appointment.medecin_id, // Médecin comme destinataire
+              null, // Pas de consultation_id
+              `${appointment.patient?.prenom} ${appointment.patient?.nom}`,
+              {
+                appointment_id: appointment.id,
+                date_heure: appointment.date_heure,
+                motif: appointment.motif
+              }
+            );
+            console.log('✅ Notification de nouveau rendez-vous envoyée');
           } catch (notifError) {
             console.error('❌ Erreur lors de l\'envoi de la notification:', notifError);
             // Ne pas bloquer le processus si la notification échoue

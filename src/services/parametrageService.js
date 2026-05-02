@@ -22,7 +22,8 @@ export const fetchParametres = async (tenantId = null) => {
     const { data: cabinetData, error: cabinetError } = await cabinetQuery;
 
 if (cabinetError) {
-  console.warn('Paramètres cabinet non disponibles, utilisation des valeurs par défaut.');
+  console.warn('Paramètres cabinet non disponibles, utilisation des valeurs par défaut.', cabinetError);
+  // Ne pas bloquer le processus, continuer avec les valeurs par défaut
 }
 
     // Récupérer les paramètres de la plateforme

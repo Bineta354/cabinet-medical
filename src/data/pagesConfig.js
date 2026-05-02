@@ -570,6 +570,17 @@ export const PAGES_CONFIG = [
 
   // REPORTING & STATISTIQUES
   {
+    id: 'database-check',
+    title: 'Diagnostic Base de Données',
+    description: 'Vérification et diagnostic de la base de données',
+    path: '/database-check',
+    category: 'Paramétrage',
+    icon: 'Database',
+    keywords: ['database', 'diagnostic', 'vérification', 'motifs', 'actes'],
+    allowedRoles: [ROLES.ADMIN, ROLES.DOCTOR],
+    isMainPage: true
+  },
+  {
     id: 'statistics',
     title: 'Statistiques',
     description: 'Statistiques du cabinet',

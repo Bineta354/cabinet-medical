@@ -4,7 +4,10 @@ import { supabase } from './supabase'
 export const NOTIFICATION_TYPES = {
   PATIENT_READY: 'patient_ready',         // Médecin → Secrétaire : "Je reçois le patient"
   PATIENT_ON_WAY: 'patient_on_way',       // Secrétaire → Médecin : "Le patient est en route"
-  CONSULTATION_ENDED: 'consultation_ended' // Médecin → Secrétaire : "Consultation terminée, je suis disponible"
+  CONSULTATION_ENDED: 'consultation_ended', // Médecin → Secrétaire : "Consultation terminée, je suis disponible"
+  NEW_APPOINTMENT: 'new_appointment',     // Système → Utilisateurs : "Nouveau rendez-vous créé"
+  APPOINTMENT_CANCELLED: 'appointment_cancelled', // Système → Utilisateurs : "Rendez-vous annulé"
+  APPOINTMENT_MODIFIED: 'appointment_modified'   // Système → Utilisateurs : "Rendez-vous modifié"
 };
 
 /**
@@ -493,21 +496,54 @@ export const subscribeToNotifications = (userId, userRole, callback) => {
   try {
     if (userRole === 'doctor') {
       // Le médecin écoute uniquement ses notifications
-      const channel = supabase
-        .channel(`notifications_doctor_${userId}`)
-        .on('postgres_changes', {
-          event: '*',
-          schema: 'public',
-          table: 'notifications_medecin_secretaire',
-          filter: `medecin_id=eq.${userId}`
-        }, (payload) => {
-          console.log('🔔 [Notifications] Changement détecté:', payload);
-          if (callback) callback(payload);
-        })
-        .subscribe((status) => {
-          console.log('📡 [Notifications] Statut abonnement:', status);
-        });
-      return channel;
+      // Convertir l'UUID auth.users vers le bigint de la table users
+      const getDoctorBigintId = async (uuid) => {
+        // Si c'est déjà un nombre, retourner directement
+        if (!isNaN(uuid) && Number(uuid) > 0) {
+          console.log('🔔 [Notifications] ID déjà numérique:', uuid);
+          return Number(uuid);
+        }
+        
+        // Sinon chercher par auth_id
+        const { data, error } = await supabase
+          .from('users')
+          .select('id')
+          .eq('auth_id', uuid)
+          .single();
+        
+        if (error || !data) {
+          console.error('❌ [Notifications] Erreur récupération ID bigint:', error);
+          return null;
+        }
+        
+        return data.id;
+      };
+
+      // Obtenir l'ID bigint puis s'abonner
+      return getDoctorBigintId(userId).then(bigintId => {
+        if (!bigintId) {
+          console.error('❌ [Notifications] ID bigint non trouvé pour:', userId);
+          return null;
+        }
+
+        console.log('🔔 [Notifications] Abonnement médecin avec ID bigint:', bigintId);
+        
+        const channel = supabase
+          .channel(`notifications_doctor_${bigintId}`)
+          .on('postgres_changes', {
+            event: '*',
+            schema: 'public',
+            table: 'notifications_medecin_secretaire',
+            filter: `medecin_id=eq.${bigintId}`
+          }, (payload) => {
+            console.log('🔔 [Notifications] Changement détecté:', payload);
+            if (callback) callback(payload);
+          })
+          .subscribe((status) => {
+            console.log('📡 [Notifications] Statut abonnement:', status);
+          });
+        return channel;
+      });
     } else if (userRole === 'secretary') {
         // Filtrer par tenant_id via getUnreadNotifications callback logic ou au moment de récupérer les events.
       // Pour une vraie isolation RLS, la souscription doit être associée au filtre eq.tenant_id ou via supabase.auth
@@ -555,9 +591,13 @@ export const subscribeToNotifications = (userId, userRole, callback) => {
  */
 export const unsubscribeFromNotifications = async (channel) => {
   try {
-    if (channel) {
-      await supabase.removeChannel(channel);
+    if (channel && typeof channel.unsubscribe === 'function') {
+      await channel.unsubscribe();
       console.log('✅ [Notifications] Désabonnement effectué');
+    } else if (channel) {
+      // Alternative method for newer Supabase versions
+      await supabase.removeChannel(channel);
+      console.log('✅ [Notifications] Désabonnement effectué (removeChannel)');
     }
   } catch (error) {
     console.error('❌ [Notifications] Erreur désabonnement:', error);

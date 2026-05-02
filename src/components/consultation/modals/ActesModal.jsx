@@ -18,6 +18,13 @@ const ActesModal = ({
     const { actes: typesActesFromHook, refresh: refetchTypesActes } = useTypesActes();
     // Liste des types d'actes : hook en priorité, sinon celle passée par le parent (referenceData.actesRef)
     const actesList = (typesActesFromHook?.length ? typesActesFromHook : (actesRef || []));
+    
+    // Debug pour voir les IDs disponibles
+    console.log('🔍 [ActesModal] Actes disponibles:', {
+      total: actesList.length,
+      ids: actesList.map(a => ({ id: a.id, nom: a.nom })).slice(0, 15),
+      source: typesActesFromHook?.length ? 'typesActesFromHook' : 'actesRef'
+    });
 
     const {  showSuccess , showError, showWarning} = useConfirmDialog();
       
@@ -99,16 +106,34 @@ const ActesModal = ({
 
       
             const acteSelected = actesList.find(a => a.id === parseInt(typeActeId));
+            
+            // Vérifier si l'acte sélectionné existe
+            if (!acteSelected) {
+              console.error('❌ [ActesModal] Type d\'acte non trouvé:', {
+                typeActeId: typeActeId,
+                actesDisponibles: actesList.map(a => ({ id: a.id, nom: a.nom })).slice(0, 10)
+              });
+              showError(`Type d'acte sélectionné invalide (ID: ${typeActeId}). Veuillez choisir un acte valide dans la liste.`);
+              return;
+            }
+            
             const tarifFinal = acteForm.tarif || acteSelected?.tarif_defaut || 0;
+            
+            console.log('🔍 [ActesModal] Insertion acte:', {
+              consultation_id: Number(id),
+              type_acte_id: Number(typeActeId),
+              acte_nom: acteSelected.nom,
+              tarif: tarifFinal
+            });
             
             // Insérer l'acte dans la consultation
             const { error } = await supabase
               .from('actes_consultation')
               .insert({
-                consultation_id: parseInt(id),
-                type_acte_id: parseInt(typeActeId),
-                quantite: parseInt(acteForm.quantite) || 1,
-                tarif_unitaire: parseFloat(tarifFinal)
+                consultation_id: Number(id),
+                type_acte_id: Number(typeActeId),
+                quantite: Number(acteForm.quantite) || 1,
+                tarif_unitaire: Number(tarifFinal)
               });
       
             if (error) throw error;
@@ -195,7 +220,16 @@ return (
                       }))}
                       value={acteForm.type_acte_id || ''}
                       onChange={(selectedId) => {
+                        console.log('🔍 [ActesModal] Sélection acte:', {
+                          selectedId: selectedId,
+                          actesListLength: actesList.length,
+                          actesListIds: actesList.map(a => a.id).slice(0, 10)
+                        });
                         const selectedActe = actesList.find(a => a.id === parseInt(selectedId));
+                        if (!selectedActe) {
+                          console.error('❌ [ActesModal] Acte non trouvé dans la liste:', selectedId);
+                          return;
+                        }
                         setActeForm({
                           ...acteForm,
                           type_acte_id: selectedId,

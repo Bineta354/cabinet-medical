@@ -98,7 +98,7 @@ const ConsultationDetailsModal = ({
                          </h4>
                       </div>
                       <div className="p-4">
-                        <p className="text-gray-700">{consultation.motif_consultation || 'Aucun motif spécifié'}</p>
+                        <p className="text-gray-700">{consultation.motif_consultation || consultation.motif || 'Consultation générale'}</p>
                       </div>
                    </div>
                 </div>
