@@ -13,6 +13,7 @@ import {
     ClockIcon,
     EyeIcon
 } from '@heroicons/react/24/outline';
+import { traduire } from '../../utils/traductions';
 
 const FacturesPage = () => {
     const [factures, setFactures] = useState([]);
@@ -494,7 +495,7 @@ const FacturesPage = () => {
                                                 <button
                                                     onClick={() => handleEdit(facture)}
                                                     className="text-blue-600 hover:text-blue-900"
-                                                    title="Modifier"
+                                                    title={traduire('edit')}
                                                 >
                                                     <PencilIcon className="h-4 w-4" />
                                                 </button>
@@ -510,7 +511,7 @@ const FacturesPage = () => {
                                                 <button
                                                     onClick={() => handleDelete(facture.id)}
                                                     className="text-red-600 hover:text-red-900"
-                                                    title="Supprimer"
+                                                    title={traduire('delete')}
                                                 >
                                                     <TrashIcon className="h-4 w-4" />
                                                 </button>

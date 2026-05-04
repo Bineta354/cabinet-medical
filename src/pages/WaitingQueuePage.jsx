@@ -1,24 +1,27 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { 
-  Clock, 
-  User, 
-  Phone, 
-  Calendar, 
-  AlertCircle, 
-  CheckCircle, 
-  XCircle,
-  ArrowRight,
-  Filter,
-  Search,
-  RefreshCw,
-  UserCheck
-} from 'lucide-react';
+  CalendarIcon, 
+  ClockIcon, 
+  UserIcon, 
+  PlusIcon,
+  CheckCircleIcon,
+  XMarkIcon,
+  MagnifyingGlassIcon,
+  ArrowDownTrayIcon,
+  UserGroupIcon,
+  FunnelIcon,
+  XCircleIcon
+} from '@heroicons/react/24/outline';
 import { supabase } from '../lib/supabase';
-import PatientForm from '../components/common/PatientForm';
-import NotificationPanel from '../components/secretary/NotificationPanel';
-import WebSocketDiagnostic from '../components/WebSocketDiagnostic';
-import RealtimeTest from '../components/RealtimeTest';
-import completeRealtimeService from '../services/completeRealtimeService';
+import { format } from 'date-fns';
+import { fr } from 'date-fns/locale';
+import PatientForm from '../components/PatientForm';
+import { useAuth } from '../contexts/AuthContext';
+import { ROLES } from '../contexts/AuthContext';
+import { completeRealtimeService } from '../services/completeRealtimeService';
+import { notificationService } from '../services/notificationService';
+import { getLibellePraticiens, getTitrePraticien } from '../utils/traductions';
 import { formatDoctorDisplay, formatDoctorSpecialties, getDoctorInitials } from '../utils/doctorUtils';
 
 const WaitingQueuePage = () => {
@@ -366,19 +369,20 @@ const WaitingQueuePage = () => {
       })) || [];
       console.log('🔄 [WaitingQueue] Rendez-vous transformés:', transformedAppointments.length, 'rendez-vous');
 
-      // Charger les médecins
-      console.log('👨‍⚕️ [WaitingQueue] Récupération des médecins...');
+      // Charger les praticiens
+      console.log('👨‍⚕️ [WaitingQueue] Récupération des praticiens...');
       const { data: doctorsData, error: doctorsError } = await supabase
         .from('users')
         .select('id, nom, prenom, specialite')
-        .eq('role', 'doctor')
+        .eq('role', 'praticien')
         .order('nom', { ascending: true });
 
       if (doctorsError) {
-        console.error('❌ [WaitingQueue] Erreur médecins:', doctorsError);
+        console.error('❌ [WaitingQueue] Erreur praticiens:', doctorsError);
         throw doctorsError;
       }
-      console.log('✅ [WaitingQueue] Médecins récupérés:', doctorsData?.length || 0, 'médecins');
+
+      console.log('✅ [WaitingQueue] Praticiens récupérés:', doctorsData?.length || 0, 'praticiens');
 
       const transformedDoctors = doctorsData?.map(doctor => ({
         id: doctor.id,
@@ -386,21 +390,21 @@ const WaitingQueuePage = () => {
         prenom: doctor.prenom,
         specialite: doctor.specialite || 'Généraliste'
       })) || [];
-      console.log('🔄 [WaitingQueue] Médecins transformés:', transformedDoctors.length, 'médecins');
-      // Fallback: si aucun médecin n'est retourné via role='doctor', dériver depuis les rendez-vous
+      console.log('🔄 [WaitingQueue] Praticiens transformés:', transformedDoctors.length, 'praticiens');
+      // Fallback: si aucun praticien n'est retourné via role='doctor', dériver depuis les rendez-vous
       let finalDoctors = transformedDoctors;
       if ((transformedDoctors?.length || 0) === 0) {
         const uniqueDoctorIds = Array.from(new Set((transformedAppointments || [])
           .map(a => a.medecin_id)
           .filter(Boolean)));
         if (uniqueDoctorIds.length > 0) {
-          console.log('⚠️  [WaitingQueue] Aucun médecin via role=doctor, fallback par appointments, ids:', uniqueDoctorIds);
+          console.log('⚠️  [WaitingQueue] Aucun praticien via role=doctor, fallback par appointments, ids:', uniqueDoctorIds);
           const { data: doctorsById, error: doctorsByIdError } = await supabase
             .from('users')
             .select('id, nom, prenom, specialite')
             .in('id', uniqueDoctorIds);
           if (doctorsByIdError) {
-            console.warn('❗ [WaitingQueue] Erreur fallback médecins par id:', doctorsByIdError);
+            console.warn('❗ [WaitingQueue] Erreur fallback praticiens par id:', doctorsByIdError);
           }
           if (doctorsById && doctorsById.length > 0) {
             finalDoctors = doctorsById.map(d => ({
@@ -413,12 +417,12 @@ const WaitingQueuePage = () => {
             // Dernier recours: placeholders à partir des IDs
             finalDoctors = uniqueDoctorIds.map(id => ({
               id,
-              nom: `Médecin ${id}`,
+              nom: `${getTitrePraticien()} ${id}`,
               prenom: '',
               specialite: 'N/A'
             }));
           }
-          console.log('🔄 [WaitingQueue] Fallback médecins transformés:', finalDoctors.length);
+          console.log('🔄 [WaitingQueue] Fallback praticiens transformés:', finalDoctors.length);
         }
       }
 
@@ -439,15 +443,15 @@ const WaitingQueuePage = () => {
     }
   };
 
-  // Filtrer les rendez-vous quand le médecin change
+  // Filtrer les rendez-vous quand le praticien change
   useEffect(() => {
     if (selectedDoctor) {
-      console.log('🔍 [WaitingQueue] Filtrage par médecin:', selectedDoctor.prenom, selectedDoctor.nom);
+      console.log('🔍 [WaitingQueue] Filtrage par praticien:', selectedDoctor.prenom, selectedDoctor.nom);
       const filtered = appointments.filter(a => a.medecin_id === selectedDoctor.id);
-      console.log('📋 [WaitingQueue] Rendez-vous filtrés:', filtered.length, 'pour le médecin', selectedDoctor.id);
+      console.log('📋 [WaitingQueue] Rendez-vous filtrés:', filtered.length, 'pour le praticien', selectedDoctor.id);
       setFilteredAppointments(filtered);
     } else {
-      console.log('🔍 [WaitingQueue] Aucun filtre médecin actif');
+      console.log('🔍 [WaitingQueue] Aucun filtre praticien actif');
       setFilteredAppointments([]);
     }
   }, [selectedDoctor, appointments]);
@@ -945,7 +949,7 @@ const WaitingQueuePage = () => {
               {selectedDoctor ? formatDoctorSpecialties(selectedDoctor) : 'Filtrer par spécialité'}
             </button>
             
-            {/* Recherche dynamique des médecins */}
+            {/* Recherche dynamique des praticiens */}
             {showDoctorSearch && (
               <div className="absolute top-full left-0 mt-2 w-80 bg-white rounded-lg shadow-lg border border-gray-200 z-50">
                 <div className="p-4 border-b border-gray-200">
@@ -1186,7 +1190,7 @@ const WaitingQueuePage = () => {
         
       </div>
 
-      {/* Section Rendez-vous - Visible seulement après sélection d'un médecin */}
+      {/* Section Rendez-vous - Visible seulement après sélection d'un praticien */}
       {selectedDoctor && (
         <div className="bg-white rounded-lg shadow-sm border border-gray-200">
           <div className="p-4 border-b border-gray-200">
@@ -1288,7 +1292,7 @@ const WaitingQueuePage = () => {
                 <p className="text-gray-500 text-lg">
                   Aucun rendez-vous pour {selectedDoctor.prenom} {selectedDoctor.nom}
                 </p>
-                <p className="text-gray-400">Ce médecin n'a pas de patients en attente actuellement</p>
+                <p className="text-gray-400">Ce {getTitrePraticien(selectedDoctor.specialite).toLowerCase()} n'a pas de patients en attente actuellement</p>
               </div>
             )}
           </div>

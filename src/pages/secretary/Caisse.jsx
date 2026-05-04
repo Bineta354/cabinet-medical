@@ -1,7 +1,25 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { 
+  Search, 
+  Plus, 
+  Edit2, 
+  Trash2, 
+  X, 
+  Check, 
+  Clock, 
+  DollarSign,
+  FileText,
+  Calendar,
+  User,
+  CreditCard,
+  Smartphone,
+  Building2
+} from 'lucide-react';
 import { supabase } from '../../lib/supabase';
-import { useAuth } from '../../contexts/AuthContext';
-import { ROLES } from '../../utils/permissions';
+import { format } from 'date-fns';
+import { fr } from 'date-fns/locale';
+import { traduire, getNomCabinet } from '../../utils/traductions';
 import { notificationService } from '../../services/notificationService';
 import { useReactToPrint } from 'react-to-print';
 import {
