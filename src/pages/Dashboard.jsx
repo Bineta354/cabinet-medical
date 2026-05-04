@@ -105,6 +105,16 @@ const Dashboard = () => {
     patients: waitingQueue.filter(q => q.medecin_id === medecin.id)
   }));
 
+  // Filtrer pour ne garder que les médecins qui ont des patients correspondant aux critères
+  const queueByDoctorWithPatients = queueByDoctor.filter(({ medecin, patients }) => {
+    // Si une spécialité est sélectionnée, vérifier que le médecin correspond
+    if (selectedSpecialite && medecin.specialite !== selectedSpecialite) {
+      return false;
+    }
+    // Ne garder que les médecins qui ont au moins un patient dans la file d'attente
+    return patients.length > 0;
+  });
+
   const markNotificationAsRead = (notificationId) => {
     // Marquer la notification comme lue localement
     setNotifications(prev => 
@@ -320,51 +330,49 @@ const Dashboard = () => {
             </h2>
           </div>
           <div className="p-6 max-h-96 overflow-y-auto">
-            {queueByDoctor.length === 0 ? (
+            {queueByDoctorWithPatients.length === 0 ? (
               <p className="text-gray-500 text-center py-8">Aucun patient en attente</p>
             ) : (
               <div className="space-y-4">
-                {queueByDoctor.map(({ medecin, patients }) => (
-                  patients.length > 0 && (
-                    <div key={medecin.id} className="border-l-4 border-medical-primary pl-4">
-                      <h3 className="font-semibold text-gray-900 mb-2">
-                        Dr. {medecin.nom} {medecin.prenom}
-                      </h3>
-                      <div className="space-y-2">
-                        {patients.map((patient) => (
-                          <div
-                            key={patient.id}
-                            className={`p-3 rounded-lg ${
-                              patient.status === 'present' 
-                                ? 'bg-green-50 border border-green-200' 
-                                : 'bg-yellow-50 border border-yellow-200'
-                            }`}
-                          >
-                            <div className="flex items-center justify-between">
-                              <div>
-                                <p className="font-medium text-gray-900">
-                                  {patient.patients?.nom} {patient.patients?.prenom}
-                                </p>
-                                <p className="text-sm text-gray-600">
-                                  Arrivée: {new Date(patient.created_at).toLocaleTimeString('fr-FR', { 
-                                    hour: '2-digit', 
-                                    minute: '2-digit' 
-                                  })}
-                                </p>
-                              </div>
-                              <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
-                                patient.status === 'present' 
-                                  ? 'bg-green-100 text-green-800' 
-                                  : 'bg-yellow-100 text-yellow-800'
-                              }`}>
-                                {patient.status === 'present' ? 'Présent' : 'En attente'}
-                              </span>
+                {queueByDoctorWithPatients.map(({ medecin, patients }) => (
+                  <div key={medecin.id} className="border-l-4 border-medical-primary pl-4">
+                    <h3 className="font-semibold text-gray-900 mb-2">
+                      Dr. {medecin.nom} {medecin.prenom}
+                    </h3>
+                    <div className="space-y-2">
+                      {patients.map((patient) => (
+                        <div
+                          key={patient.id}
+                          className={`p-3 rounded-lg ${
+                            patient.status === 'present' 
+                              ? 'bg-green-50 border border-green-200' 
+                              : 'bg-yellow-50 border border-yellow-200'
+                          }`}
+                        >
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <p className="font-medium text-gray-900">
+                                {patient.patients?.nom} {patient.patients?.prenom}
+                              </p>
+                              <p className="text-sm text-gray-600">
+                                Arrivée: {new Date(patient.created_at).toLocaleTimeString('fr-FR', { 
+                                  hour: '2-digit', 
+                                  minute: '2-digit' 
+                                })}
+                              </p>
                             </div>
+                            <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
+                              patient.status === 'present' 
+                                ? 'bg-green-100 text-green-800' 
+                                : 'bg-yellow-100 text-yellow-800'
+                            }`}>
+                              {patient.status === 'present' ? 'Présent' : 'En attente'}
+                            </span>
                           </div>
-                        ))}
-                      </div>
+                        </div>
+                      ))}
                     </div>
-                  )
+                  </div>
                 ))}
               </div>
             )}

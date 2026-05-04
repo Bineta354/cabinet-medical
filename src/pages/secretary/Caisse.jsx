@@ -1558,7 +1558,7 @@ const Caisse = () => {
                   onClick={() => { setShowArreteModal(true); fetchArreteMensuel(); }}
                   className="px-3 py-1.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 flex items-center gap-1.5 text-sm"
                 >
-                  <DocumentTextIcon className="w-4 h-4" /> Arrêté mensuel
+                  <DocumentTextIcon className="w-4 h-4" /> Arrêté mensuel (Caisse)
                 </button>
               </>
             ) : (
@@ -1575,7 +1575,7 @@ const Caisse = () => {
                   onClick={() => { setShowArreteModal(true); fetchArreteMensuel(); }}
                   className="px-3 py-1.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 flex items-center gap-1.5 text-sm"
                 >
-                  <DocumentTextIcon className="w-4 h-4" /> Arrêté mensuel
+                  <DocumentTextIcon className="w-4 h-4" /> Arrêté mensuel (Caisse)
                 </button>
               </>
             )}

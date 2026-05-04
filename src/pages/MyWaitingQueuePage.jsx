@@ -679,7 +679,7 @@ const MyWaitingQueuePage = () => {
           <div className="flex items-center gap-3">
             <div className={`w-3 h-3 rounded-full ${isActive ? 'bg-green-500' : 'bg-gray-400'}`}></div>
             <span className="text-sm font-medium text-gray-600">
-              {isActive ? 'Statut actif' : 'Statut inactif'}
+              {isActive ? 'Dossier: Actif' : 'Dossier: Inactif'}
             </span>
           </div>
           
@@ -823,7 +823,7 @@ const MyWaitingQueuePage = () => {
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-xl font-semibold text-gray-900 flex items-center gap-2">
               <Clock className="w-5 h-5 text-yellow-600" />
-              En Attente ({patientsEnAttente.length})
+              Visite: En Attente ({patientsEnAttente.length})
             </h2>
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
@@ -997,7 +997,7 @@ const MyWaitingQueuePage = () => {
                     </div>
                     <div className="flex items-center gap-1">
                       <Clock className="w-4 h-4" />
-                      En attente de consultation
+                      Visite: En attente
                     </div>
                   </div>
                   
@@ -1047,7 +1047,7 @@ const MyWaitingQueuePage = () => {
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-xl font-semibold text-gray-900 flex items-center gap-2">
               <Stethoscope className="w-5 h-5 text-green-600" />
-              En Consultation ({patientsEnConsultation.length})
+              Visite: En Consultation ({patientsEnConsultation.length})
             </h2>
           </div>
           

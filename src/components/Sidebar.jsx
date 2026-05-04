@@ -127,7 +127,7 @@ const Sidebar = () => {
         name: 'COMPTABILITÉ CAISSE',
         icon: Calculator,
         items: [
-          { name: 'Arrêté mensuel', icon: FileText, path: '/caissier/arrete-mensuel' },
+          { name: 'Arrêté mensuel (Caisse)', icon: FileText, path: '/caissier/arrete-mensuel' },
           { name: 'Reversement bancaire', icon: CreditCard, path: '/caissier/reversement-bancaire' },
         ]
       }

@@ -781,8 +781,8 @@ const WaitingQueuePage = () => {
     };
     
     const statusLabels = {
-      waiting: 'En attente',
-      in_consultation: 'En consultation',
+      waiting: 'Visite: En attente',
+      in_consultation: 'Visite: En consultation',
       finished: 'Terminé',
       late: 'En retard',
       emergency: 'Urgence',
@@ -1006,7 +1006,7 @@ const WaitingQueuePage = () => {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-gray-600">
-                {selectedDoctor ? `En attente - ${selectedDoctor.prenom}` : 'Total en attente'}
+                {selectedDoctor ? `Visite: En attente - ${selectedDoctor.prenom}` : 'Total en attente'}
               </p>
               <p className="text-2xl font-bold text-gray-900">{patientsEnAttente.length}</p>
             </div>
@@ -1018,7 +1018,7 @@ const WaitingQueuePage = () => {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-gray-600">
-                {selectedDoctor ? `En consultation - ${selectedDoctor.prenom}` : 'En consultation'}
+                {selectedDoctor ? `Visite: En consultation - ${selectedDoctor.prenom}` : 'Visite: En consultation'}
               </p>
               <p className="text-2xl font-bold text-gray-900">{patientsEnConsultation.length}</p>
             </div>
@@ -1051,12 +1051,12 @@ const WaitingQueuePage = () => {
 
       {/* File d'attente */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Patients en attente */}
+        {/* Patients en attente de visite */}
         <div className="card">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-xl font-semibold text-gray-900 flex items-center gap-2">
               <Clock className="w-5 h-5 text-yellow-600" />
-              En Attente ({patientsEnAttente.length})
+              Visite: En Attente ({patientsEnAttente.length})
               {selectedDoctor && (
                 <span className="text-sm font-normal text-gray-500">
                   - {selectedDoctor.prenom} {selectedDoctor.nom}

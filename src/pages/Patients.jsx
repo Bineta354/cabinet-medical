@@ -179,7 +179,7 @@ const PatientsPage = () => {
     
     return (
       <span className={`px-2 py-1 rounded-full text-xs font-medium ${statusClasses[actif] || statusClasses.false}`}>
-        {actif ? 'Actif' : 'Inactif'}
+        {actif ? 'Dossier: Actif' : 'Dossier: Inactif'}
       </span>
     );
   };
@@ -761,7 +761,7 @@ const PatientsPage = () => {
           >
             <option value="all">Tous les statuts</option>
             <option value="actif">Actifs</option>
-            <option value="inactif">Inactifs</option>
+            <option value="inactif">Dossiers inactifs</option>
           </select>
          </div>
           

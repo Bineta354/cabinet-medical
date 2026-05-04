@@ -15,7 +15,7 @@ const ArreteMensuel = () => {
   const handlePrint = () => {
     if (!printRef.current) return;
     const prevTitle = document.title;
-    document.title = `Arrêté mensuel ${MOIS[mois - 1]} ${annee}`;
+    document.title = `Arrêté mensuel de la caisse ${MOIS[mois - 1]} ${annee}`;
     window.print();
     document.title = prevTitle;
   };
@@ -128,7 +128,7 @@ const ArreteMensuel = () => {
 
           <div ref={printRef} className="bg-white rounded-xl shadow overflow-hidden print:shadow-none">
             <div className="px-4 py-2 border-b border-gray-200 print:block hidden md:block">
-              <h2 className="text-lg font-semibold">Arrêté mensuel – {MOIS[mois - 1]} {annee}</h2>
+              <h2 className="text-lg font-semibold">Arrêté mensuel de la caisse – {MOIS[mois - 1]} {annee}</h2>
             </div>
             <table className="min-w-full text-sm">
               <thead className="bg-gray-50">

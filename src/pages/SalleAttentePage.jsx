@@ -187,14 +187,14 @@ const SalleAttentePage = () => {
 
   const getStatusBadge = (status) => {
     const statusConfig = {
-      waiting: { color: 'bg-yellow-100 text-yellow-800', icon: Clock, label: 'En attente' },
+      waiting: { color: 'bg-yellow-100 text-yellow-800', icon: Clock, label: 'Visite: En attente' },
       present: { color: 'bg-blue-100 text-blue-800', icon: UserCheck, label: 'Présent' },
       arrive: { color: 'bg-blue-100 text-blue-800', icon: UserCheck, label: 'Arrivé' },
       called: { color: 'bg-orange-100 text-orange-800', icon: Bell, label: 'Appelé' },
       appele: { color: 'bg-orange-100 text-orange-800', icon: Bell, label: 'Appelé' },
       medecin_pret: { color: 'bg-cyan-100 text-cyan-800', icon: CheckCircle, label: 'Médecin prêt' },
       en_route: { color: 'bg-purple-100 text-purple-800', icon: User, label: 'En route' },
-      in_consultation: { color: 'bg-green-100 text-green-800', icon: Stethoscope, label: 'En consultation' }
+      in_consultation: { color: 'bg-green-100 text-green-800', icon: Stethoscope, label: 'Visite: En consultation' }
     };
     
     const config = statusConfig[status] || statusConfig.waiting;
@@ -299,7 +299,7 @@ const SalleAttentePage = () => {
           <div className="flex items-center">
             <Clock className="w-8 h-8 text-yellow-600" />
             <div className="ml-3">
-              <p className="text-sm font-medium text-gray-500">En attente</p>
+              <p className="text-sm font-medium text-gray-600">Visite: En attente</p>
               <p className="text-2xl font-bold text-gray-900">
                 {patientsEnAttente.filter(p => p.status === 'waiting').length}
               </p>
@@ -335,7 +335,7 @@ const SalleAttentePage = () => {
           <div className="flex items-center">
             <Stethoscope className="w-8 h-8 text-green-600" />
             <div className="ml-3">
-              <p className="text-sm font-medium text-gray-500">En consultation</p>
+              <p className="text-sm font-medium text-gray-600">Visite: En consultation</p>
               <p className="text-2xl font-bold text-gray-900">
                 {patientsEnAttente.filter(p => p.status === 'in_consultation').length}
               </p>

@@ -14,7 +14,7 @@ import {
 } from 'lucide-react';
 
 const AddPatientModal = ({ doctors, onClose, onPatientAdded }) => {
-  const { showError, showWarning } = useAlert();
+  const { showError, showWarning, showSuccess } = useAlert();
   const [step, setStep] = useState(1); // 1: Sélection patient, 2: Détails
   const [searchTerm, setSearchTerm] = useState('');
   const [patients, setPatients] = useState([]);
@@ -156,7 +156,11 @@ const AddPatientModal = ({ doctors, onClose, onPatientAdded }) => {
 
       if (error) throw error;
 
+      // Afficher un message de succès
+      showSuccess(`Patient ${selectedPatient.prenom} ${selectedPatient.nom} ajouté à la file d'attente avec succès !`);
+      
       onPatientAdded();
+      onClose();
     } catch (error) {
       console.error('Erreur lors de l\'ajout du patient:', error);
       showError('Erreur lors de l\'ajout du patient à la file d\'attente');
