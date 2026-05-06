@@ -146,8 +146,16 @@ const FacturesPage = () => {
         e.preventDefault();
         
         try {
+            // Concaténer les notes de paiement avec les notes existantes
+            const existingNotes = selectedFacture.notes || '';
+            const newNote = paiementData.notes ? paiementData.notes.trim() : '';
+            const combinedNotes = existingNotes && newNote 
+                ? `${existingNotes} | ${newNote}` 
+                : (existingNotes || newNote);
+
             const paiementUpdate = {
                 ...paiementData,
+                notes: combinedNotes,
                 date_paiement: new Date().toISOString(),
                 statut_paiement: paiementData.montant_paye >= selectedFacture.montant_ttc ? 'paye' : 'partiel',
                 updated_by: (await supabase.auth.getUser()).data.user?.id

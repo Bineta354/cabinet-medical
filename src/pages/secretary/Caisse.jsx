@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Search, 
@@ -19,9 +19,11 @@ import {
 import { supabase } from '../../lib/supabase';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import { traduire, getNomCabinet } from '../../utils/traductions';
+import { unifiedNotificationService } from '../../services/unifiedNotificationService';
 import { notificationService } from '../../services/notificationService';
 import { useReactToPrint } from 'react-to-print';
+import { useAuth } from '../../contexts/AuthContext';
+import { ROLES } from '../../utils/permissions';
 import {
   CheckCircleIcon,
   CurrencyEuroIcon,
@@ -1117,7 +1119,7 @@ const Caisse = () => {
     try {
       const fondCaisse = parseFloat(fondCaisseInput) || 0;
       if (fondCaisse < 0) {
-        alert('Le fond de caisse doit être positif ou nul');
+        unifiedNotificationService.error('Le fond de caisse doit être positif ou nul');
         return;
       }
 
@@ -1140,7 +1142,7 @@ const Caisse = () => {
       if (checkErr && checkErr.code !== 'PGRST116') throw checkErr;
 
       if (existing) {
-        alert('Votre session de caisse est déjà ouverte aujourd\'hui. Utilisez « Mise à jour caisse » pour rafraîchir ou fermez la session en fin de journée.');
+        unifiedNotificationService.error('Votre session de caisse est déjà ouverte aujourd\'hui. Utilisez « Mise à jour caisse » pour rafraîchir ou fermez la session en fin de journée.');
         return;
       }
 
@@ -1163,10 +1165,10 @@ const Caisse = () => {
       setFondCaisseInput('');
       await fetchSessionCaisse();
       fetchEtatCaisse();
-      alert(`Caisse ouverte avec un fond de ${fondCaisse.toFixed(0)} F CFA`);
+      unifiedNotificationService.success(`Caisse ouverte avec un fond de ${fondCaisse.toFixed(0)} F CFA`);
     } catch (err) {
       console.error('handleOpenCaisse:', err);
-      alert('Erreur lors de l\'ouverture de la caisse: ' + (err?.message || err));
+      unifiedNotificationService.error('Erreur lors de l\'ouverture de la caisse: ' + (err?.message || err));
     }
   };
 
@@ -1174,12 +1176,12 @@ const Caisse = () => {
   const handleCloseCaisse = async () => {
     try {
       if (!sessionCaisse) {
-        alert('Aucune session de caisse ouverte');
+        unifiedNotificationService.error('Aucune session de caisse ouverte');
         return;
       }
       // Sécurité : ne fermer que sa propre session
       if (caissierId != null && String(sessionCaisse.caissier_id) !== String(caissierId)) {
-        alert('Cette session ne vous appartient pas. Veuillez rafraîchir la page.');
+        unifiedNotificationService.error('Cette session ne vous appartient pas. Veuillez rafraîchir la page.');
         return;
       }
 
@@ -1194,10 +1196,10 @@ const Caisse = () => {
       setShowCloseCaisseModal(false);
       await fetchSessionCaisse();
       fetchEtatCaisse();
-      alert(`Caisse fermée. Montant journalier: ${parseFloat(data.montant_journalier || 0).toFixed(0)} F CFA`);
+      unifiedNotificationService.success(`Caisse fermée. Montant journalier: ${parseFloat(data.montant_journalier || 0).toFixed(0)} F CFA`);
     } catch (err) {
       console.error('handleCloseCaisse:', err);
-      alert('Erreur lors de la fermeture de la caisse: ' + (err?.message || err));
+      unifiedNotificationService.error('Erreur lors de la fermeture de la caisse: ' + (err?.message || err));
     }
   };
 
@@ -1210,10 +1212,10 @@ const Caisse = () => {
       setSessionCaisse(null);
       setFondCaisseInput('');
       fetchEtatCaisse();
-      alert('Caisse réinitialisée. Vous pouvez maintenant ouvrir une nouvelle session.');
+      unifiedNotificationService.success('Caisse réinitialisée. Vous pouvez maintenant ouvrir une nouvelle session.');
     } catch (err) {
       console.error('handleResetCaisse:', err);
-      alert('Erreur lors de la réinitialisation: ' + (err?.message || err));
+      unifiedNotificationService.error('Erreur lors de la réinitialisation: ' + (err?.message || err));
     }
   };
 
@@ -1229,7 +1231,7 @@ const Caisse = () => {
     } catch (err) {
       console.error('fetchArreteMensuel:', err);
       setArreteData([]);
-      alert('Erreur lors du chargement de l\'arrêté: ' + (err?.message || err));
+      unifiedNotificationService.error('Erreur lors du chargement de l\'arrêté: ' + (err?.message || err));
     }
   };
 
@@ -1374,7 +1376,7 @@ const Caisse = () => {
     
     // Vérifier que la caisse est ouverte
     if (!sessionCaisse) {
-      alert('La caisse est fermée. Veuillez d\'abord ouvrir une session de caisse.');
+      unifiedNotificationService.error('La caisse est fermée. Veuillez d\'abord ouvrir une session de caisse.');
       return;
     }
     
@@ -1460,11 +1462,13 @@ const Caisse = () => {
         true
       );
 
-      // Imprimer le reçu puis ouvrir la facture (impression automatique)
-      handlePrintReceipt();
+      // Désactiver l'impression automatique pour éviter les plantages
+      // TODO: Réactiver quand react-to-print sera stable
+      console.log('Impression du reçu désactivée temporairement');
+      
       setTimeout(() => {
         openFacturePaiementWindow(facturePaiementHtml);
-      }, 500);
+      }, 200);
       setTimeout(() => {
         setShowPaiementModal(false);
         setSelectedFacture(null);
@@ -1473,13 +1477,26 @@ const Caisse = () => {
       }, 300);
     } catch (err) {
       console.error('handlePaiementSubmit:', err);
-      alert("Erreur lors de l'enregistrement : " + (err?.message || err));
+      unifiedNotificationService.error("Erreur lors de l'enregistrement : " + (err?.message || err));
     } finally {
       setSubmitting(false);
     }
   };
 
-  const handlePrintReceipt = useReactToPrint({ content: () => componentRef.current });
+  const handlePrintReceipt = useReactToPrint({ 
+    content: () => componentRef.current,
+    onBeforeGetContent: () => {
+      // Vérifier qu'il y a du contenu à imprimer
+      if (!componentRef.current) {
+        console.warn('Aucun contenu à imprimer');
+        return false;
+      }
+      return true;
+    },
+    onPrintError: (error) => {
+      console.warn('Erreur lors de l\'impression:', error);
+    }
+  });
 
   // ——— Reçu (même numéro affiché pour patient et couverture) avec date et lignes signatures ———
   const Receipt = React.forwardRef(
@@ -2447,9 +2464,9 @@ const Caisse = () => {
         </div>
       )}
 
-      {/* Reçu masqué pour impression */}
-      <div className="hidden">
-        {selectedFacture && (
+      {/* Reçu pour impression - caché visuellement mais disponible pour react-to-print */}
+      <div style={{ position: 'absolute', left: '-9999px', top: '-9999px' }}>
+        {selectedFacture && paiementData && (
           <div ref={componentRef}>
             <Receipt facture={selectedFacture} paiement={paiementData} montantAssurance={montantAssurance} couvertureNom={couvertureNom} />
           </div>

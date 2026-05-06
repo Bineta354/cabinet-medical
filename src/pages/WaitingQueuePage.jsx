@@ -11,18 +11,21 @@ import {
   ArrowDownTrayIcon,
   UserGroupIcon,
   FunnelIcon,
-  XCircleIcon
+  XCircleIcon,
+  ArrowPathIcon,
+  PhoneIcon
 } from '@heroicons/react/24/outline';
 import { supabase } from '../lib/supabase';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import PatientForm from '../components/PatientForm';
+import PatientForm from '../components/common/PatientForm';
 import { useAuth } from '../contexts/AuthContext';
-import { ROLES } from '../contexts/AuthContext';
-import { completeRealtimeService } from '../services/completeRealtimeService';
+import { ROLES } from '../utils/permissions';
+import completeRealtimeService from '../services/completeRealtimeService';
 import { notificationService } from '../services/notificationService';
 import { getLibellePraticiens, getTitrePraticien } from '../utils/traductions';
 import { formatDoctorDisplay, formatDoctorSpecialties, getDoctorInitials } from '../utils/doctorUtils';
+import NotificationPanel from '../components/secretary/NotificationPanel';
 
 const WaitingQueuePage = () => {
   const [patients, setPatients] = useState([]);
@@ -482,39 +485,41 @@ const WaitingQueuePage = () => {
         console.error('❌ [WaitingQueue] Erreur création patient:', patientError);
         throw patientError;
       }
-      console.log('✅ [WaitingQueue] Patient créé:', newPatient.id, newPatient.nom, newPatient.prenom);
 
-      // Ajouter le patient à la file d'attente
-      console.log('📋 [WaitingQueue] Ajout à la file d\'attente...');
-      const { data: waitingQueueItem, error: waitingError } = await supabase
+      console.log('✅ [WaitingQueue] Patient créé:', newPatient);
+
+      // Ajouter à la file d'attente
+      const { data: waitingQueueItem, error: waitingQueueError } = await supabase
         .from('waiting_queue')
         .insert([{
           patient_id: newPatient.id,
-          medecin_id: patientData.medecin_id,
-          status: 'waiting',
-          priorite: patientData.priorite,
-          motif: patientData.motif
+          medecin_id: selectedDoctor?.id || null,
+          status: 'en_attente',
+          priorite: 'normale',
+          motif: 'Consultation',
+          date_arrivee: new Date().toISOString(),
+          created_at: new Date().toISOString()
         }])
-        .select(`
-          *,
-          patient:patients(nom, prenom, telephone, numero_dossier)
-        `)
+        .select()
         .single();
 
-      if (waitingError) {
-        console.error('❌ [WaitingQueue] Erreur ajout file d\'attente:', waitingError);
-        throw waitingError;
+      if (waitingQueueError) {
+        console.error('❌ [WaitingQueue] Erreur ajout file d\'attente:', waitingQueueError);
+        throw waitingQueueError;
       }
-      console.log('✅ [WaitingQueue] Patient ajouté à la file d\'attente:', waitingQueueItem.id);
 
-      // Transformer en format attendu
+      console.log('✅ [WaitingQueue] Patient ajouté à la file d\'attente:', waitingQueueItem);
+
+      // Transformer et ajouter le patient à l'état local
       const transformedPatient = {
         id: waitingQueueItem.id,
-        nom: waitingQueueItem.patient?.nom || '',
-        prenom: waitingQueueItem.patient?.prenom || '',
-        telephone: waitingQueueItem.patient?.telephone || '',
-        heureArrivee: new Date(waitingQueueItem.created_at).toLocaleTimeString('fr-FR', { 
-          hour: '2-digit', 
+        patient_id: newPatient.id,
+        nom: newPatient.nom,
+        prenom: newPatient.prenom,
+        telephone: newPatient.telephone,
+        date_arrivee: waitingQueueItem.date_arrivee,
+        heure_arrivee: new Date(waitingQueueItem.date_arrivee).toLocaleTimeString('fr-FR', {
+          hour: '2-digit',
           minute: '2-digit' 
         }),
         status: waitingQueueItem.status,
@@ -525,7 +530,6 @@ const WaitingQueuePage = () => {
       };
 
       setPatients(prev => [...prev, transformedPatient]);
-      setShowAddPatientModal(false);
       
       console.log('🎉 [WaitingQueue] Patient ajouté avec succès:', transformedPatient.prenom, transformedPatient.nom);
       
@@ -537,20 +541,20 @@ const WaitingQueuePage = () => {
           duration: 3000
         });
       }
+      
+      // Ne plus fermer automatiquement la modal - laisser l'utilisateur décider
+      
     } catch (error) {
       console.error('❌ [WaitingQueue] Erreur lors de l\'ajout du patient:', error);
-      
-      // Afficher un toast d'erreur
       if (window.showNotification) {
         window.showNotification({
-          message: 'Erreur lors de l\'ajout du patient. Veuillez réessayer.',
+          message: "Erreur lors de l'ajout du patient à la file d'attente",
           type: 'error',
-          duration: 4000
+          duration: 5000
         });
       }
     }
   };
-
   const handleStartConsultation = async (patientId) => {
     try {
       console.log('🏥 [WaitingQueue] Démarrage consultation pour patient:', patientId);
@@ -859,7 +863,7 @@ const WaitingQueuePage = () => {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-3">
-            <Clock className="w-8 h-8 text-medical-primary" />
+            <ClockIcon className="w-8 h-8 text-medical-primary" />
             File d'Attente
             <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
               realtimeStatus === 'connected' 
@@ -917,7 +921,7 @@ const WaitingQueuePage = () => {
             className="btn btn-secondary flex items-center gap-2"
             title="Actualiser les données"
           >
-            <RefreshCw className="w-5 h-5" />
+            <ArrowPathIcon className="w-5 h-5" />
             Actualiser
           </button>
           <button 
@@ -927,7 +931,7 @@ const WaitingQueuePage = () => {
             }`}
             title="Diagnostic WebSocket"
           >
-            <AlertCircle className="w-5 h-5" />
+            <XCircleIcon className="w-5 h-5" />
             Diagnostic
           </button>
           {realtimeStatus === 'error' && (
@@ -936,7 +940,7 @@ const WaitingQueuePage = () => {
               className="btn btn-warning flex items-center gap-2"
               title="Forcer la reconnexion"
             >
-              <RefreshCw className="w-5 h-5" />
+              <ArrowPathIcon className="w-5 h-5" />
               Reconnexion
             </button>
           )}
@@ -945,7 +949,7 @@ const WaitingQueuePage = () => {
               onClick={() => setShowDoctorSearch(!showDoctorSearch)}
               className="btn btn-secondary flex items-center gap-2"
             >
-              <Filter className="w-5 h-5" />
+              <FunnelIcon className="w-5 h-5" />
               {selectedDoctor ? formatDoctorSpecialties(selectedDoctor) : 'Filtrer par spécialité'}
             </button>
             
@@ -1014,7 +1018,7 @@ const WaitingQueuePage = () => {
               </p>
               <p className="text-2xl font-bold text-gray-900">{patientsEnAttente.length}</p>
             </div>
-            <Clock className="w-8 h-8 text-medical-primary" />
+            <ClockIcon className="w-8 h-8 text-medical-primary" />
           </div>
         </div>
         
@@ -1026,7 +1030,7 @@ const WaitingQueuePage = () => {
               </p>
               <p className="text-2xl font-bold text-gray-900">{patientsEnConsultation.length}</p>
             </div>
-            <CheckCircle className="w-8 h-8 text-green-600" />
+            <CheckCircleIcon className="w-8 h-8 text-green-600" />
           </div>
         </div>
         
@@ -1036,7 +1040,7 @@ const WaitingQueuePage = () => {
               <p className="text-sm font-medium text-gray-600">Temps moyen</p>
               <p className="text-2xl font-bold text-gray-900">18 min</p>
             </div>
-            <AlertCircle className="w-8 h-8 text-yellow-600" />
+            <XCircleIcon className="w-8 h-8 text-yellow-600" />
           </div>
         </div>
         
@@ -1048,7 +1052,7 @@ const WaitingQueuePage = () => {
                 {patients.filter(p => p.priorite === 'urgente' || p.priorite === 'tres_urgente').length}
               </p>
             </div>
-            <AlertCircle className="w-8 h-8 text-red-600" />
+            <XCircleIcon className="w-8 h-8 text-red-600" />
           </div>
         </div>
       </div>
@@ -1059,7 +1063,7 @@ const WaitingQueuePage = () => {
         <div className="card">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-xl font-semibold text-gray-900 flex items-center gap-2">
-              <Clock className="w-5 h-5 text-yellow-600" />
+              <ClockIcon className="w-5 h-5 text-yellow-600" />
               En Attente ({patientsEnAttente.length})
               {selectedDoctor && (
                 <span className="text-sm font-normal text-gray-500">
@@ -1069,7 +1073,7 @@ const WaitingQueuePage = () => {
               <span className="text-xs text-green-600 font-medium">• Mise à jour automatique</span>
             </h2>
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+              <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
               <input
                 type="text"
                 placeholder="Rechercher..."
@@ -1115,13 +1119,13 @@ const WaitingQueuePage = () => {
                           )}
                           {isFromAppointment && (
                             <span className="bg-green-100 text-green-800 text-xs font-medium px-2 py-1 rounded-full flex items-center gap-1">
-                              <Calendar className="w-3 h-3" />
+                              <CalendarIcon className="w-3 h-3" />
                               RDV
                             </span>
                           )}
                           {isCalled && (
                             <span className="bg-orange-100 text-orange-800 text-xs font-medium px-2 py-1 rounded-full flex items-center gap-1">
-                              <Phone className="w-3 h-3" />
+                              <PhoneIcon className="w-3 h-3" />
                               Appelé
                             </span>
                           )}
@@ -1146,11 +1150,11 @@ const WaitingQueuePage = () => {
                 <div className="flex items-center justify-between mt-3 pt-3 border-t border-gray-100">
                   <div className="flex items-center gap-4 text-sm text-gray-600">
                     <div className="flex items-center gap-1">
-                      <Phone className="w-4 h-4" />
-                      {patient.telephone}
+                      <PhoneIcon className="w-4 h-4" />
+                      {patient.telephone || 'Non renseigné'}
                     </div>
                     <div className="flex items-center gap-1">
-                      <Calendar className="w-4 h-4" />
+                      <CalendarIcon className="w-4 h-4" />
                       {patient.heureArrivee}
                     </div>
                   </div>
@@ -1161,7 +1165,7 @@ const WaitingQueuePage = () => {
                       className="flex items-center gap-1 px-3 py-2 text-white bg-green-600 hover:bg-green-700 rounded-lg transition-colors"
                       title="Marquer présent"
                     >
-                      <UserCheck className="w-4 h-4" />
+                      <CheckCircleIcon className="w-4 h-4" />
                       Présent
                     </button>
                     <button 
@@ -1169,7 +1173,7 @@ const WaitingQueuePage = () => {
                       className="flex items-center gap-1 px-3 py-2 text-red-700 bg-red-50 hover:bg-red-100 rounded-lg transition-colors"
                       title="Marquer absent"
                     >
-                      <XCircle className="w-4 h-4" />
+                      <XCircleIcon className="w-4 h-4" />
                       Absent
                     </button>
                   </div>
@@ -1180,7 +1184,7 @@ const WaitingQueuePage = () => {
             
             {filteredPatientsEnAttente.length === 0 && (
               <div className="text-center py-8">
-                <Clock className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                <ClockIcon className="w-12 h-12 text-gray-400 mx-auto mb-4" />
                 <p className="text-gray-500">Aucun patient en attente</p>
               </div>
             )}
@@ -1233,7 +1237,7 @@ const WaitingQueuePage = () => {
                               </span>
                             )}
                           </div>
-                          <p className="text-sm text-gray-600">Tél: {appointment.patient_telephone}</p>
+                          <p className="text-sm text-gray-600">Tél: {appointment.patient?.telephone || 'Non renseigné'}</p>
                         </div>
                       </div>
                     
@@ -1242,11 +1246,11 @@ const WaitingQueuePage = () => {
                       
                       <div className="flex items-center gap-4 text-xs text-gray-500">
                         <div className="flex items-center gap-1">
-                          <Phone className="w-3 h-3" />
-                          {appointment.patient_telephone}
+                          <PhoneIcon className="w-3 h-3" />
+                          {appointment.patient?.telephone || 'Non renseigné'}
                         </div>
                         <div className="flex items-center gap-1">
-                          <Calendar className="w-3 h-3" />
+                          <CalendarIcon className="w-3 h-3" />
                           {new Date(appointment.date_heure).toLocaleTimeString('fr-FR', { 
                             hour: '2-digit', 
                             minute: '2-digit' 
@@ -1306,8 +1310,12 @@ const WaitingQueuePage = () => {
             doctors={doctors}
             onSubmit={handleAddPatient}
             onCancel={() => setShowAddPatientModal(false)}
-            title="Ajouter un nouveau patient"
-            submitText="Ajouter le patient"
+            onAddAnother={() => {
+              console.log('🔄 [WaitingQueue] Ajout d\'un autre patient');
+            }}
+            title="Ajouter un patient à la file d'attente"
+            submitText="Enregistrer et fermer"
+            showAddAnother={true}
             defaultDoctor={selectedDoctor}
           />
         </div>
