@@ -5,6 +5,7 @@ export const NOTIFICATION_TYPES = {
   PATIENT_READY: 'patient_ready',         // Médecin → Secrétaire : "Je reçois le patient"
   PATIENT_ON_WAY: 'patient_on_way',       // Secrétaire → Médecin : "Le patient est en route"
   CONSULTATION_ENDED: 'consultation_ended', // Médecin → Secrétaire : "Consultation terminée, je suis disponible"
+  FACTURATION_COMPLETE: 'facturation_complete', // Caissier → Secrétaire : "Facturation terminée, documents disponibles"
   NEW_APPOINTMENT: 'new_appointment',     // Système → Utilisateurs : "Nouveau rendez-vous créé"
   APPOINTMENT_CANCELLED: 'appointment_cancelled', // Système → Utilisateurs : "Rendez-vous annulé"
   APPOINTMENT_MODIFIED: 'appointment_modified'   // Système → Utilisateurs : "Rendez-vous modifié"
@@ -35,9 +36,9 @@ export const sendNotification = async (type, senderId, receiverId, consultationI
     const message = generateNotificationMessage(type, patientName, additionalData.medecinName);
     const titre = generateNotificationTitle(type);
     
-    // Pour CONSULTATION_ENDED, envoyer à TOUTES les secrétaires actives du MÊME cabinet
-    if (type === NOTIFICATION_TYPES.CONSULTATION_ENDED) {
-      console.log('🔵 [Notifications] Notification CONSULTATION_ENDED - Envoi aux secrétaires actives du cabinet');
+    // Pour CONSULTATION_ENDED et FACTURATION_COMPLETE, envoyer à TOUTES les secrétaires actives du MÊME cabinet
+    if (type === NOTIFICATION_TYPES.CONSULTATION_ENDED || type === NOTIFICATION_TYPES.FACTURATION_COMPLETE) {
+      console.log('🔵 [Notifications] Notification', type, '- Envoi aux secrétaires actives du cabinet');
       
       let query = supabase
         .from('users')
@@ -206,6 +207,8 @@ const generateNotificationMessage = (type, patientName, medecinName) => {
       return medecinName 
         ? `${medecinName} a terminé la consultation avec ${patientName}. Cliquez pour compléter la facturation.`
         : `Consultation du patient ${patientName} terminée. Cliquez pour compléter la facturation.`;
+    case NOTIFICATION_TYPES.FACTURATION_COMPLETE:
+      return `La facturation pour ${patientName} est terminée. Les documents sont disponibles pour remise au patient.`;
     default:
       return 'Nouvelle notification';
   }
@@ -222,6 +225,8 @@ const generateNotificationTitle = (type) => {
       return 'Patient en route';
     case NOTIFICATION_TYPES.CONSULTATION_ENDED:
       return 'Consultation terminée - Compléter la facturation';
+    case NOTIFICATION_TYPES.FACTURATION_COMPLETE:
+      return 'Facturation terminée - Documents disponibles';
     default:
       return 'Notification';
   }

@@ -14,6 +14,7 @@ import {
     EyeIcon
 } from '@heroicons/react/24/outline';
 import { traduire } from '../../utils/traductions';
+import { sendNotification, NOTIFICATION_TYPES } from '../../lib/notifications';
 
 const FacturesPage = () => {
     const [factures, setFactures] = useState([]);
@@ -167,6 +168,48 @@ const FacturesPage = () => {
                 .eq('id', selectedFacture.id);
 
             if (error) throw error;
+
+            // Envoyer notification à la secrétaire après paiement (une seule fois)
+            try {
+                const { data: patientData } = await supabase
+                    .from('patients')
+                    .select('nom, prenom')
+                    .eq('id', selectedFacture.patient_id)
+                    .single();
+
+                const { data: userData } = await supabase.auth.getUser();
+                const caissierId = userData.data.user?.id;
+
+                // Vérifier si une notification existe déjà pour cette facture spécifique
+                const { data: existingNotification } = await supabase
+                    .from('notifications_medecin_secretaire')
+                    .select('id')
+                    .eq('type_notification', 'facturation_complete')
+                    .eq('patient_id', selectedFacture.patient_id)
+                    .eq('lu', false)
+                    .order('created_at', { ascending: false })
+                    .limit(1);
+
+                if (patientData && caissierId && (!existingNotification || existingNotification.length === 0)) {
+                    await sendNotification(
+                        NOTIFICATION_TYPES.FACTURATION_COMPLETE,
+                        caissierId,
+                        null, // receiverId null car envoi à toutes les secrétaires
+                        selectedFacture.consultation_id,
+                        `${patientData.prenom} ${patientData.nom}`,
+                        {
+                            factureId: selectedFacture.id,
+                            patientId: selectedFacture.patient_id
+                        }
+                    );
+                    console.log('✅ [Factures] Notification envoyée à la secrétaire après paiement');
+                } else if (existingNotification && existingNotification.length > 0) {
+                    console.log('ℹ️ [Factures] Notification déjà existante pour cette facturation');
+                }
+            } catch (notifError) {
+                console.error('⚠️ [Factures] Erreur envoi notification:', notifError);
+                // Ne pas bloquer le processus si la notification échoue
+            }
 
             setShowPaiementModal(false);
             setSelectedFacture(null);
