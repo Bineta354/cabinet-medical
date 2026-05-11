@@ -726,7 +726,7 @@ export const appointmentService = {
   },
 
   // Récupérer les rendez-vous pour une date donnée
-  async getappointmentsByDate(dayString) {
+  async getAppointmentsByDate(dayString) {
     try {
       const { data: baseAppts, error: apptErr } = await supabase
         .from('appointments')
@@ -777,9 +777,9 @@ export const appointmentService = {
   },
 
   // Récupérer les rendez-vous pour une date donnée et un médecin spécifique
-  async getappointmentsByDateAndDoctor(dayString, doctorId = null) {
+  async getAppointmentsByDateAndDoctor(dayString, doctorId = null) {
     try {
-      let appointments = await this.getappointmentsByDate(dayString);
+      let appointments = await this.getAppointmentsByDate(dayString);
 
       if (doctorId) {
         appointments = appointments.filter(apt => apt.medecin_id === doctorId);

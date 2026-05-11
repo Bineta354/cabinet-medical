@@ -183,9 +183,7 @@ const StatisticsPage = lazy(() => import('./pages/StatisticsPage'));
 const HistoriquesArchivesPage = lazy(() => import('./pages/HistoriquesArchivesPage'));
 // Import direct pour contourner le problème de lazy loading
 import PatientsPage from './pages/Patients';
-import PatientsTestMinimal from './pages/PatientsTestMinimal';
 import MesPatientsPageDirect from './pages/MesPatients';
-import MesPatientsTestMinimal from './pages/MesPatientsTestMinimal';
 const WaitingQueuePage = lazy(() => import('./pages/WaitingQueuePage'));
 const SecretaryDashboard = lazy(() => import('./components/secretary/SecretaryDashboard'));
 const MedicalRecordsPage = lazy(() => import('./pages/MedicalRecordsPage'));
