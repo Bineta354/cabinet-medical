@@ -62,7 +62,7 @@ export const useAppointmentBookingData = (selectedDateFilter, selectedDoctorIdFi
 
       const dayString = targetDate.toISOString().split('T')[0];
 
-      const fetchedAppointments = await appointmentService.getappointmentsByDateAndDoctor(dayString, selectedDoctorIdFilter);
+      const fetchedAppointments = await appointmentService.getAppointmentsByDateAndDoctor(dayString, selectedDoctorIdFilter);
 
       setAppointments(fetchedAppointments || []);
     } catch (err) {
