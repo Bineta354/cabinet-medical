@@ -13,7 +13,9 @@ import {
   AlertCircle,
   RefreshCw,
   Edit,
-  Trash2
+  Trash2,
+  ChevronLeft,
+  ChevronRight
 } from 'lucide-react';
 
 const MesPatientsPage = () => {
@@ -26,6 +28,9 @@ const MesPatientsPage = () => {
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
     const [userProfile, setUserProfile] = useState(null);
+    const [currentPage, setCurrentPage] = useState(1);
+    const [itemsPerPage] = useState(15);
+    const [recentFilter, setRecentFilter] = useState(true); // Par défaut, afficher seulement les patients récents
 
     useEffect(() => {
       initializeData();
@@ -125,6 +130,11 @@ const MesPatientsPage = () => {
             // Essayer avec différentes tables possibles
             const consultationTables = ['consultations', 'consultation', 'rendez_vous', 'consultations_medecins'];
 
+            // Calculer la date limite pour les consultations récentes (90 jours)
+            const recentDate = new Date();
+            recentDate.setDate(recentDate.getDate() - 90);
+            const recentDateISO = recentDate.toISOString();
+
             for (const tableName of consultationTables) {
               try {
                 console.log(` [TEST] Test de la table: ${tableName}`);
@@ -143,11 +153,17 @@ const MesPatientsPage = () => {
                 console.log(` [TEST] Table ${tableName} existe, test de récupération...`);
 
                 // Si la table existe, essayer de trouver les patients du médecin
-                const { data: consultData, error: consultError } = await supabase
+                // Filtrer par date si le filtre récent est activé
+                let query = supabase
                   .from(tableName)
                   .select('*')
-                  .eq('medecin_id', doctorId)
-                  .limit(10);
+                  .eq('medecin_id', doctorId);
+
+                if (recentFilter) {
+                  query = query.gte('date_consultation', recentDateISO);
+                }
+
+                const { data: consultData, error: consultError } = await query.limit(10);
 
                 if (consultError) {
                   console.log(` [TEST] Erreur avec ${tableName}:`, consultError.message);
@@ -253,6 +269,28 @@ const MesPatientsPage = () => {
       return matchesSearch;
     });
 
+    // Pagination
+    const totalPages = Math.ceil(filteredPatients.length / itemsPerPage);
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
+    const paginatedPatients = filteredPatients.slice(startIndex, endIndex);
+
+    const handlePageChange = (page) => {
+      setCurrentPage(page);
+    };
+
+    const handlePreviousPage = () => {
+      if (currentPage > 1) {
+        setCurrentPage(currentPage - 1);
+      }
+    };
+
+    const handleNextPage = () => {
+      if (currentPage < totalPages) {
+        setCurrentPage(currentPage + 1);
+      }
+    };
+
     if (loading) {
       return (
         <div className="flex items-center justify-center h-64">
@@ -305,9 +343,9 @@ const MesPatientsPage = () => {
             </button>
           </div>
 
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto max-h-[500px] overflow-y-auto">
             <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
+              <thead className="bg-gray-50 sticky top-0">
                 <tr>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Patient
@@ -321,7 +359,7 @@ const MesPatientsPage = () => {
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {filteredPatients.map((patient) => (
+                {paginatedPatients.map((patient) => (
                   <tr key={patient.id} className="hover:bg-gray-50">
                     <td className="py-4 px-4">
                       <div className="flex items-center">
@@ -397,6 +435,45 @@ const MesPatientsPage = () => {
                   Les patients apparaîtront ici après votre première consultation avec eux
                 </p>
               )}
+            </div>
+          )}
+
+          {filteredPatients.length > 0 && totalPages > 1 && (
+            <div className="flex items-center justify-between px-6 py-4 border-t border-gray-200">
+              <div className="text-sm text-gray-600">
+                Affichage de {startIndex + 1} à {Math.min(endIndex, filteredPatients.length)} sur {filteredPatients.length} patients
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={handlePreviousPage}
+                  disabled={currentPage === 1}
+                  className="p-2 rounded-lg border border-gray-300 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  <ChevronLeft className="w-5 h-5" />
+                </button>
+                <div className="flex items-center gap-1">
+                  {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                    <button
+                      key={page}
+                      onClick={() => handlePageChange(page)}
+                      className={`px-3 py-1 rounded-lg text-sm font-medium transition-colors ${
+                        currentPage === page
+                          ? 'bg-medical-primary text-white'
+                          : 'border border-gray-300 hover:bg-gray-50'
+                      }`}
+                    >
+                      {page}
+                    </button>
+                  ))}
+                </div>
+                <button
+                  onClick={handleNextPage}
+                  disabled={currentPage === totalPages}
+                  className="p-2 rounded-lg border border-gray-300 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  <ChevronRight className="w-5 h-5" />
+                </button>
+              </div>
             </div>
           )}
         </div>
