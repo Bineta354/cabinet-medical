@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  FileSearch, 
-  Search, 
-  Filter, 
-  Plus, 
-  Edit, 
+import {
+  FileSearch,
+  Search,
+  Filter,
+  Plus,
+  Edit,
   Trash2,
   Eye,
   Download,
@@ -25,6 +25,7 @@ import {
 import { supabase } from '../../lib/supabase';
 import SearchableSelect from '../../components/common/SearchableSelect';
 import { useAlert } from '../../contexts/AlertContext';
+import { generateFacturePDF } from '../../services/impression/facturePdf.js';
 
 const FacturationExamens = () => {
   const { showError, showSuccess, showWarning, showInfo } = useAlert();
@@ -462,9 +463,21 @@ const FacturationExamens = () => {
     }
   };
 
-  const handleDownload = (facture) => {
+  const handleDownload = async (facture) => {
     console.log('Téléchargement facturation examen:', facture.numero);
     showInfo(`Téléchargement de la facturation ${facture.numero} en cours...`);
+
+    try {
+      const result = await generateFacturePDF(supabase, facture, false, null);
+      if (result.success) {
+        showSuccess(`Facturation ${facture.numero} téléchargée avec succès!`);
+      } else {
+        showError(`Erreur lors du téléchargement: ${result.error}`);
+      }
+    } catch (error) {
+      console.error('Erreur lors du téléchargement:', error);
+      showError('Erreur lors du téléchargement de la facturation');
+    }
   };
 
   const getStatusColor = (statut) => {
