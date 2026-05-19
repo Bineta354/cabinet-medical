@@ -86,6 +86,7 @@ const Sidebar = () => {
           { name: 'Fiche Patient', icon: UserCheck, path: '/rendez-vous/fiche-patient' },
           { name: 'Recherche Rendez-vous', icon: Search, path: '/appointments/recherche' },
           { name: 'Rappels SMS', icon: MessageSquare, path: '/rendez-vous/rappels-sms' },
+          { name: 'Détails des rendez-vous', icon: FileText, path: '/rendez-vous/details' },
         ]
       },
       {
