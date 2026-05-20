@@ -267,6 +267,7 @@ const FichePatientOnly = lazy(() => import('./pages/rendez-vous/FichePatientOnly
 const PriseRendezVousPage = lazy(() => import('./pages/rendez-vous/PriseRendezVousPage'));
 const RappelsSmsPage = lazy(() => import('./pages/rendez-vous/RappelsSmsPage'));
 const RechercheRendezVousPage = lazy(() => import('./pages/rendez-vous/RechercheRendezVousPage'));
+const DetailsRendezVous = lazy(() => import('./pages/rendez-vous/DetailsRendezVous'));
 
 // Pages de paramètres simples (pas de lazy loading nécessaire)
 const GeneralSettingsPage = () => (
@@ -598,6 +599,12 @@ const AppContent = () => {
         <Route path="/rendez-vous/rappels-sms" element={
           <ProtectedRoute allowedRoles={['secretary', 'admin']}>
             <LazyPageWrapper Component={RappelsSmsPage} message="Chargement rappels SMS..." />
+          </ProtectedRoute>
+        } />
+        
+        <Route path="/rendez-vous/details" element={
+          <ProtectedRoute allowedRoles={['secretary', 'admin']}>
+            <LazyPageWrapper Component={DetailsRendezVous} message="Chargement détails des rendez-vous..." />
           </ProtectedRoute>
         } />
         

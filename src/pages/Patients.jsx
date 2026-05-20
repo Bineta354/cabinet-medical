@@ -480,8 +480,7 @@ const PatientsPage = () => {
                 <X className="w-6 h-6" />
               </button>
             </div>
-            
-            {/* Contenu du formulaire */}
+
             <div className="p-4">
               <form onSubmit={handleSubmitForm}>
                 <div className="grid grid-cols-3 gap-2">
