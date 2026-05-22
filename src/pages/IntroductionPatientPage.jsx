@@ -1,8 +1,21 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { sendNotification, NOTIFICATION_TYPES } from '../lib/notifications';
+import {
+  WAITING_QUEUE_ACTIVE_STATUSES,
+  computeQueueStats,
+  filterActiveQueueItems,
+  isInConsultationQueueStatus,
+  isOnWaitingBench,
+} from '../utils/waitingQueueStatus';
+import ClickableStatCard from '../components/common/ClickableStatCard';
+import {
+  confirmSkippedWorkflowSteps,
+  validateQueueTransition,
+} from '../utils/workflowGuards';
+import { shouldHidePastAppointment } from '../utils/appointmentDisplay';
 import { 
   UserPlus, 
   Calendar, 
@@ -45,6 +58,41 @@ const IntroductionPatientPage = () => {
   const [appointments, setAppointments] = useState([]);
   const [consultationCount, setConsultationCount] = useState(0);
   const [notifications, setNotifications] = useState([]);
+  const [arrivalsStatFilter, setArrivalsStatFilter] = useState('all');
+  const waitingSectionRef = useRef(null);
+
+  const waitingQueueStats = useMemo(
+    () => computeQueueStats(waitingQueue),
+    [waitingQueue],
+  );
+
+  const visibleTodayAppointments = useMemo(
+    () => appointments.filter((appt) => !shouldHidePastAppointment(appt)),
+    [appointments],
+  );
+
+  const displayedWaitingQueue = useMemo(() => {
+    switch (arrivalsStatFilter) {
+      case 'bench':
+        return waitingQueue.filter((item) => isOnWaitingBench(item.status));
+      case 'consultation':
+        return waitingQueue.filter((item) =>
+          isInConsultationQueueStatus(item.status),
+        );
+      case 'doctors_ready':
+        return waitingQueue.filter((item) => item.medecin_disponible);
+      default:
+        return waitingQueue;
+    }
+  }, [waitingQueue, arrivalsStatFilter]);
+
+  const toggleArrivalsFilter = (filter) => {
+    setArrivalsStatFilter((current) => (current === filter ? 'all' : filter));
+    waitingSectionRef.current?.scrollIntoView({
+      behavior: 'smooth',
+      block: 'start',
+    });
+  };
   
   // États de chargement
   // État de chargement global
@@ -393,7 +441,7 @@ const IntroductionPatientPage = () => {
       const { data: queue, error: qErr } = await supabase
         .from('waiting_queue')
         .select('*')
-        .in('status', ['waiting', 'present', 'called', 'arrive', 'appele', 'medecin_pret', 'authorized', 'en_route', 'in_consultation'])
+        .in('status', WAITING_QUEUE_ACTIVE_STATUSES)
         .order('created_at', { ascending: false });
       if (qErr) throw qErr;
 
@@ -443,8 +491,9 @@ const IntroductionPatientPage = () => {
         patient: patientMap[item.patient_id] || null,
         medecin: doctorMap[item.medecin_id] || null,
       }));
-      setWaitingQueue(enriched);
-      return enriched;
+      const activeQueue = filterActiveQueueItems(enriched);
+      setWaitingQueue(activeQueue);
+      return activeQueue;
     } catch (error) {
       handleError(error, 'la récupération de la file d\'attente');
       return [];
@@ -562,8 +611,25 @@ const IntroductionPatientPage = () => {
       return;
     }
 
+    const current = waitingQueue.find((i) => i.id === waitingQueueId);
+    if (current) {
+      const transition = validateQueueTransition(
+        current.status,
+        'in_consultation',
+      );
+      if (
+        transition.needsConfirmation &&
+        !confirmSkippedWorkflowSteps(
+          transition.skippedSteps,
+          'confirmer l\'entrée en consultation',
+        )
+      ) {
+        return;
+      }
+    }
+
     setIsLoading(prev => ({ ...prev, actions: true }));
-    
+
     try {
       const { data, error } = await supabase.rpc('confirm_patient_entry_basesql', {
         p_waiting_queue_id: waitingQueueId,
@@ -627,18 +693,23 @@ const IntroductionPatientPage = () => {
       
       console.log('📋 [IntroductionPatient] Patient:', patientName, '| Médecin:', medecinId);
 
-      // Gérer les différents statuts
       if (current.status === 'en_route') {
         throw new Error('Le patient est déjà en route vers le médecin');
       }
-      
-      if (current.status === 'in_consultation') {
+
+      if (
+        current.status === 'in_consultation' ||
+        current.status === 'en_consultation'
+      ) {
         throw new Error('Le patient est déjà en consultation');
       }
-      
-      // Si le médecin n'est pas prêt, afficher un message informatif mais permettre l'action
-      if (current.status !== 'medecin_pret') {
-        console.warn('Médecin pas encore prêt, mais autorisation forcée par secrétaire');
+
+      const transition = validateQueueTransition(current.status, 'en_route');
+      if (
+        transition.needsConfirmation &&
+        !confirmSkippedWorkflowSteps(transition.skippedSteps, 'envoyer le patient')
+      ) {
+        return;
       }
 
       // Mettre à jour le statut du patient vers "en_route"
@@ -887,56 +958,60 @@ const IntroductionPatientPage = () => {
           <div className="space-y-6">
             {/* Statistiques rapides */}
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-              <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
-                <div className="flex items-center">
-                  <Calendar className="w-8 h-8 text-blue-600 mr-3" />
-                  <div>
-                    <p className="text-sm font-medium text-blue-700">RDV Aujourd'hui</p>
-                    <p className="text-2xl font-bold text-blue-900">{appointments.length}</p>
-                  </div>
-                </div>
-              </div>
-              <div className="bg-orange-50 rounded-lg p-4 border border-orange-200">
-                <div className="flex items-center">
-                  <Clock className="w-8 h-8 text-orange-600 mr-3" />
-                  <div>
-                    <p className="text-sm font-medium text-orange-700">En attente</p>
-                    <p className="text-2xl font-bold text-orange-900">{waitingQueue.length}</p>
-                  </div>
-                </div>
-              </div>
-              <div className="bg-green-50 rounded-lg p-4 border border-green-200">
-                <div className="flex items-center">
-                  <Users className="w-8 h-8 text-green-600 mr-3" />
-                  <div>
-                    <p className="text-sm font-medium text-green-700">En consultation</p>
-                    <p className="text-2xl font-bold text-green-900">{consultationCount}</p>
-                  </div>
-                </div>
-              </div>
-              <div className="bg-purple-50 rounded-lg p-4 border border-purple-200">
-                <div className="flex items-center">
-                  <Bell className="w-8 h-8 text-purple-600 mr-3" />
-                  <div>
-                    <p className="text-sm font-medium text-purple-700">Médecins prêts</p>
-                    <p className="text-2xl font-bold text-purple-900">
-                      {waitingQueue.filter(q => q.medecin_disponible).length}
-                    </p>
-                  </div>
-                </div>
-              </div>
+              <ClickableStatCard
+                tone="blue"
+                bordered
+                icon={Calendar}
+                label="RDV Aujourd'hui"
+                value={visibleTodayAppointments.length}
+                onClick={() => navigate('/secretary-calendar')}
+                title="Ouvrir le calendrier"
+              />
+              <ClickableStatCard
+                tone="orange"
+                bordered
+                icon={Clock}
+                label="En salle"
+                value={waitingQueueStats.onBench}
+                onClick={() => toggleArrivalsFilter('bench')}
+                active={arrivalsStatFilter === 'bench'}
+                title="Filtrer les patients en salle"
+              />
+              <ClickableStatCard
+                tone="green"
+                bordered
+                icon={Users}
+                label="En consultation"
+                value={consultationCount}
+                onClick={() => toggleArrivalsFilter('consultation')}
+                active={arrivalsStatFilter === 'consultation'}
+                title="Filtrer les patients en consultation"
+              />
+              <ClickableStatCard
+                tone="purple"
+                bordered
+                icon={Bell}
+                label="Médecins prêts"
+                value={waitingQueue.filter((q) => q.medecin_disponible).length}
+                onClick={() => toggleArrivalsFilter('doctors_ready')}
+                active={arrivalsStatFilter === 'doctors_ready'}
+                title="Filtrer les médecins disponibles"
+              />
             </div>
 
             {/* Salle d'attente */}
-            <div className="bg-white rounded-lg shadow-md p-6 border border-gray-200">
+            <div
+              ref={waitingSectionRef}
+              className="bg-white rounded-lg shadow-md p-6 border border-gray-200 scroll-mt-4"
+            >
               <div className="flex justify-between items-center mb-4">
                 <h3 className="text-lg font-semibold text-gray-900 flex items-center">
                   <Clock className="w-5 h-5 mr-2" />
-                  Salle d'attente ({waitingQueue.length})
+                  Salle d'attente ({waitingQueueStats.inWaitingRoom})
                 </h3>
               </div>
               <div className="space-y-3">
-                {waitingQueue.map((item, index) => (
+                {displayedWaitingQueue.map((item, index) => (
                   <div key={item.id} className="p-4 border border-gray-200 rounded-lg hover:bg-gray-50">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center space-x-4">
@@ -1046,7 +1121,7 @@ const IntroductionPatientPage = () => {
                     </div>
                   </div>
                 ))}
-                {waitingQueue.length === 0 && (
+                {displayedWaitingQueue.length === 0 && (
                   <div className="text-center py-8">
                     <Users className="w-10 h-10 text-gray-400 mx-auto mb-2" />
                     <p className="text-gray-600">Aucun patient en salle d'attente</p>

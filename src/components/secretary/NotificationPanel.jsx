@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Bell, PhoneCall, CheckCircle, X, AlertCircle } from 'lucide-react';
+import { Bell, PhoneCall, CheckCircle, X, AlertCircle, CalendarPlus } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
+import { useNavigate } from 'react-router-dom'; // Importez useNavigate
 import { getUnreadNotifications, markAsRead, subscribeToNotifications, unsubscribeFromNotifications } from '../../lib/notifications';
 import useUserProfile from '../../hooks/useUserProfile';
 
@@ -8,6 +9,7 @@ const NotificationPanel = ({ onNotificationAction }) => {
   const { currentUser } = useAuth();
   const { userProfile } = useUserProfile();
   const [notifications, setNotifications] = useState([]);
+  const navigate = useNavigate(); // Initialisez useNavigate
   const [isVisible, setIsVisible] = useState(false);
 
   useEffect(() => {
@@ -67,6 +69,18 @@ const NotificationPanel = ({ onNotificationAction }) => {
     }
   };
 
+  const handleNavigateToCalendar = () => {
+    navigate('/secretary-calendar');
+  };
+
+  const handleScheduleAction = async (notification) => {
+    if (onNotificationAction) {
+      onNotificationAction('open_rdv_modal', notification.data);
+    }
+    await markAsRead(notification.id);
+    loadNotifications();
+  };
+
   const handleDismiss = async (notificationId) => {
     try {
       await markAsRead(notificationId);
@@ -88,7 +102,9 @@ const NotificationPanel = ({ onNotificationAction }) => {
           className={`bg-white border-l-4 rounded-lg shadow-lg p-4 animate-pulse ${
             notification.type_notification === 'call_patient' 
               ? 'border-orange-500 bg-orange-50' 
-              : 'border-blue-500 bg-blue-50'
+              : notification.type_notification === 'appointment_request'
+                ? 'border-purple-500 bg-purple-50'
+                : 'border-blue-500 bg-blue-50'
           }`}
         >
           <div className="flex items-start justify-between">
@@ -96,10 +112,14 @@ const NotificationPanel = ({ onNotificationAction }) => {
               <div className={`p-2 rounded-full ${
                 notification.type_notification === 'call_patient' 
                   ? 'bg-orange-100 text-orange-600' 
+                  : notification.type_notification === 'appointment_request'
+                    ? 'bg-purple-100 text-purple-600'
                   : 'bg-blue-100 text-blue-600'
               }`}>
                 {notification.type_notification === 'call_patient' ? (
                   <PhoneCall className="w-5 h-5" />
+                ) : notification.type_notification === 'appointment_request' ? (
+                  <CalendarPlus className="w-5 h-5" />
                 ) : (
                   <Bell className="w-5 h-5" />
                 )}
@@ -108,6 +128,8 @@ const NotificationPanel = ({ onNotificationAction }) => {
                 <p className="font-medium text-gray-900">
                   {notification.type_notification === 'call_patient' 
                     ? 'Appeler le patient' 
+                    : notification.type_notification === 'appointment_request'
+                      ? 'Planifier RDV'
                     : 'Notification'
                   }
                 </p>
@@ -131,6 +153,27 @@ const NotificationPanel = ({ onNotificationAction }) => {
                   <CheckCircle className="w-3 h-3" />
                   Appelé
                 </button>
+              )}
+              {notification.type_notification === 'appointment_request' && (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => handleScheduleAction(notification)}
+                    className="px-3 py-1 bg-purple-600 text-white text-xs rounded-full hover:bg-purple-700 transition-colors flex items-center gap-1"
+                  >
+                    <CalendarPlus className="w-3 h-3" />
+                    Planifier
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleNavigateToCalendar}
+                    className="px-3 py-1 bg-blue-600 text-white text-xs rounded-full hover:bg-blue-700 transition-colors flex items-center gap-1"
+                    title="Voir le calendrier complet"
+                  >
+                    <CalendarPlus className="w-3 h-3" />
+                    Voir calendrier
+                  </button>
+                </>
               )}
               <button
                 onClick={() => handleDismiss(notification.id)}

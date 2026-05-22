@@ -22,6 +22,7 @@ import {
   FileText,
   X
 } from 'lucide-react';
+import PatientPostCreateMenu from '../components/common/PatientPostCreateMenu';
 
 const PatientsPage = () => {
   console.log('🔄 [PatientsFinal] Chargement de la page Patients - VERSION FINALE');
@@ -71,6 +72,8 @@ const PatientsPage = () => {
     notes: ''
   });
   const [editingPatientId, setEditingPatientId] = useState(null);
+  const [createdPatient, setCreatedPatient] = useState(null);
+  const [showPostCreateMenu, setShowPostCreateMenu] = useState(false);
 
   // Charger les patients depuis la base de données
   useEffect(() => {
@@ -262,12 +265,11 @@ const PatientsPage = () => {
     }));
   };
 
-  const handleSubmitForm = async (e) => {
-    e.preventDefault();
+  const handleSubmitForm = async (e, options = { showPostCreateMenu: true }) => {
+    if (e?.preventDefault) e.preventDefault();
     
     try {
       if (editingPatientId) {
-        // Mise à jour
         const { error } = await supabase
           .from('patients')
           .update(formData)
@@ -275,29 +277,46 @@ const PatientsPage = () => {
         
         if (error) throw error;
         unifiedNotificationService.success('Patient modifié avec succès');
+        setShowForm(false);
+        setEditingPatientId(null);
       } else {
-        // Ajout
         const { data: userProfile } = await supabase
           .from('users')
           .select('tenant_id')
           .eq('auth_id', (await supabase.auth.getUser()).data.user?.id)
           .single();
 
-        const { error } = await supabase
+        const { data: newPatient, error } = await supabase
           .from('patients')
-          .insert([{ ...formData, tenant_id: userProfile?.tenant_id }]);
+          .insert([{ ...formData, tenant_id: userProfile?.tenant_id }])
+          .select()
+          .single();
         
         if (error) throw error;
-        unifiedNotificationService.success('Patient ajouté avec succès');
+
+        setShowForm(false);
+        setEditingPatientId(null);
+        fetchPatients();
+
+        if (options.showPostCreateMenu) {
+          setCreatedPatient(newPatient);
+          setShowPostCreateMenu(true);
+        } else {
+          unifiedNotificationService.success('Patient ajouté avec succès');
+        }
+        return;
       }
       
-      setShowForm(false);
-      setEditingPatientId(null);
       fetchPatients();
     } catch (error) {
       console.error('Erreur lors de la sauvegarde:', error);
       unifiedNotificationService.error('Erreur lors de la sauvegarde du patient');
     }
+  };
+
+  const handleClosePostCreateMenu = () => {
+    setShowPostCreateMenu(false);
+    setCreatedPatient(null);
   };
 
   const handleAddPatient = async () => {
@@ -725,7 +744,8 @@ const PatientsPage = () => {
                     <button
                       type="button"
                       onClick={async () => {
-                        await handleSubmitForm({ preventDefault: () => {} });
+                        await handleSubmitForm({ preventDefault: () => {} }, { showPostCreateMenu: false });
+                        unifiedNotificationService.success('Patient ajouté avec succès');
                         handleAddPatient();
                       }}
                       className="btn btn-success text-xs py-1.5 px-3"
@@ -984,6 +1004,12 @@ const PatientsPage = () => {
           </div>
         )}
       </div>
+
+      <PatientPostCreateMenu
+        patient={createdPatient}
+        isOpen={showPostCreateMenu}
+        onClose={handleClosePostCreateMenu}
+      />
     </div>
   );
 };

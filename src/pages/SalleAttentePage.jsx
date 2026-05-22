@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
 import { 
@@ -26,6 +26,15 @@ import {
 } from 'lucide-react';
 import { formatDoctorSpecialties, getDoctorInitials } from '../utils/doctorUtils';
 import PatientDocumentUploader from '../components/secretary/PatientDocumentUploader';
+import {
+  WAITING_QUEUE_ACTIVE_STATUSES,
+  computeQueueStats,
+  filterActiveQueueItems,
+  isStrictlyWaitingStatus,
+  isPresentInQueueStatus,
+  isCalledInQueueStatus,
+  isInConsultationQueueStatus,
+} from '../utils/waitingQueueStatus';
 
 const SalleAttentePage = () => {
   const { currentUser } = useAuth();
@@ -36,6 +45,7 @@ const SalleAttentePage = () => {
   const [notifications, setNotifications] = useState([]);
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [selectedPatientForUpload, setSelectedPatientForUpload] = useState(null);
+  const [statusFilter, setStatusFilter] = useState('all');
 
   useEffect(() => {
     fetchPatientsEnAttente();
@@ -64,14 +74,11 @@ const SalleAttentePage = () => {
 
   const fetchPatientsEnAttente = async () => {
     try {
-      const today = new Date().toISOString().split('T')[0];
-
-      // 1) Récupérer la file d'attente sans jointures imbriquées - inclure tous les statuts pertinents
+      // 1) Tous les patients actifs en file (sans filtre date — évite les compteurs à 0)
       const { data: queueData, error: queueError } = await supabase
         .from('waiting_queue')
         .select('*')
-        .in('status', ['waiting', 'present', 'called', 'arrive', 'appele', 'en_route', 'medecin_pret', 'in_consultation'])
-        .gte('created_at', `${today}T00:00:00`)
+        .in('status', WAITING_QUEUE_ACTIVE_STATUSES)
         .order('order_position', { ascending: true });
 
       if (queueError) throw queueError;
@@ -141,7 +148,7 @@ const SalleAttentePage = () => {
         medecin: doctorMap[item.medecin_id] || { id: item.medecin_id, nom: 'Inconnu', prenom: 'Dr.', specialite: 'N/A' },
       }));
 
-      setPatientsEnAttente(enriched);
+      setPatientsEnAttente(filterActiveQueueItems(enriched));
     } catch (error) {
       console.error('Erreur lors du chargement des patients en attente:', error);
     } finally {
@@ -235,6 +242,30 @@ const SalleAttentePage = () => {
     setShowPatientDetails(true);
   };
 
+  const queueStats = computeQueueStats(patientsEnAttente);
+
+  const displayedPatients = useMemo(() => {
+    if (statusFilter === 'all') return patientsEnAttente;
+    if (statusFilter === 'waiting') {
+      return patientsEnAttente.filter((p) => isStrictlyWaitingStatus(p.status));
+    }
+    if (statusFilter === 'present') {
+      return patientsEnAttente.filter((p) => isPresentInQueueStatus(p.status));
+    }
+    if (statusFilter === 'called') {
+      return patientsEnAttente.filter((p) => isCalledInQueueStatus(p.status));
+    }
+    if (statusFilter === 'in_consultation') {
+      return patientsEnAttente.filter((p) =>
+        isInConsultationQueueStatus(p.status),
+      );
+    }
+    return patientsEnAttente;
+  }, [patientsEnAttente, statusFilter]);
+
+  const statCardClass =
+    'bg-white rounded-lg shadow-md p-4 border border-gray-200 cursor-pointer transition-all hover:shadow-lg hover:ring-2 hover:ring-medical-primary/25';
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -257,7 +288,10 @@ const SalleAttentePage = () => {
         <div className="flex items-center space-x-4">
           <div className="flex items-center space-x-2">
             <Users className="w-5 h-5 text-gray-400" />
-            <span className="text-sm text-gray-600">{patientsEnAttente.length} patients</span>
+            <span className="text-sm text-gray-600">
+              {queueStats.inWaitingRoom} patient
+              {queueStats.inWaitingRoom > 1 ? 's' : ''} en salle
+            </span>
           </div>
           <button 
             onClick={fetchPatientsEnAttente}
@@ -295,53 +329,67 @@ const SalleAttentePage = () => {
 
       {/* Statistiques rapides */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div className="bg-white rounded-lg shadow-md p-4 border border-gray-200">
+        <button
+          type="button"
+          onClick={() => setStatusFilter(statusFilter === 'waiting' ? 'all' : 'waiting')}
+          className={`text-left ${statCardClass} ${statusFilter === 'waiting' ? 'ring-2 ring-yellow-400' : ''}`}
+        >
           <div className="flex items-center">
             <Clock className="w-8 h-8 text-yellow-600" />
             <div className="ml-3">
               <p className="text-sm font-medium text-gray-500">En attente</p>
-              <p className="text-2xl font-bold text-gray-900">
-                {patientsEnAttente.filter(p => p.status === 'waiting').length}
-              </p>
+              <p className="text-2xl font-bold text-gray-900">{queueStats.waiting}</p>
             </div>
           </div>
-        </div>
-        
-        <div className="bg-white rounded-lg shadow-md p-4 border border-gray-200">
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setStatusFilter(statusFilter === 'present' ? 'all' : 'present')}
+          className={`text-left ${statCardClass} ${statusFilter === 'present' ? 'ring-2 ring-blue-400' : ''}`}
+        >
           <div className="flex items-center">
             <UserCheck className="w-8 h-8 text-blue-600" />
             <div className="ml-3">
               <p className="text-sm font-medium text-gray-500">Présents</p>
-              <p className="text-2xl font-bold text-gray-900">
-                {patientsEnAttente.filter(p => ['present', 'arrive'].includes(p.status)).length}
-              </p>
+              <p className="text-2xl font-bold text-gray-900">{queueStats.present}</p>
             </div>
           </div>
-        </div>
-        
-        <div className="bg-white rounded-lg shadow-md p-4 border border-gray-200">
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setStatusFilter(statusFilter === 'called' ? 'all' : 'called')}
+          className={`text-left ${statCardClass} ${statusFilter === 'called' ? 'ring-2 ring-orange-400' : ''}`}
+        >
           <div className="flex items-center">
             <Bell className="w-8 h-8 text-orange-600" />
             <div className="ml-3">
               <p className="text-sm font-medium text-gray-500">Appelés</p>
-              <p className="text-2xl font-bold text-gray-900">
-                {patientsEnAttente.filter(p => ['called', 'appele'].includes(p.status)).length}
-              </p>
+              <p className="text-2xl font-bold text-gray-900">{queueStats.called}</p>
             </div>
           </div>
-        </div>
-        
-        <div className="bg-white rounded-lg shadow-md p-4 border border-gray-200">
+        </button>
+
+        <button
+          type="button"
+          onClick={() =>
+            setStatusFilter(
+              statusFilter === 'in_consultation' ? 'all' : 'in_consultation',
+            )
+          }
+          className={`text-left ${statCardClass} ${statusFilter === 'in_consultation' ? 'ring-2 ring-green-400' : ''}`}
+        >
           <div className="flex items-center">
             <Stethoscope className="w-8 h-8 text-green-600" />
             <div className="ml-3">
               <p className="text-sm font-medium text-gray-500">En consultation</p>
               <p className="text-2xl font-bold text-gray-900">
-                {patientsEnAttente.filter(p => p.status === 'in_consultation').length}
+                {queueStats.inConsultation}
               </p>
             </div>
           </div>
-        </div>
+        </button>
       </div>
 
       {/* Liste des patients */}
@@ -351,7 +399,7 @@ const SalleAttentePage = () => {
         </div>
         
         <div className="divide-y divide-gray-200">
-          {patientsEnAttente.map((item, index) => (
+          {displayedPatients.map((item, index) => (
             <div 
               key={item.id} 
               className={`p-6 border-l-4 ${getPriorityColor(item.priorite)} hover:bg-gray-50 transition-colors`}

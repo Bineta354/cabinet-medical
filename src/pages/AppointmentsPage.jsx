@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useSearchParams } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
-import motifsConsultationService from '../services/motifsConsultationService';
+import AppointmentTypeMotifFields, { resolveAppointmentMotif } from '../components/common/AppointmentTypeMotifFields';
 import patientStatusService from '../services/patientStatusService';
 import { 
   Calendar, 
@@ -28,7 +28,6 @@ const AppointmentsPage = () => {
   const [appointments, setAppointments] = useState([]);
   const [patients, setPatients] = useState([]);
   const [doctors, setDoctors] = useState([]);
-  const [motifsList, setMotifsList] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
@@ -40,9 +39,12 @@ const AppointmentsPage = () => {
     medecin_id: '',
     date_heure: '',
     motif: '',
+    motif_autre: '',
+    type_rdv: 'consultation',
+    priorite: 'normale',
     duree: 30,
     statut: 'confirme',
-    notes: ''
+    notes: '',
   });
 
   useEffect(() => {
@@ -63,7 +65,6 @@ const AppointmentsPage = () => {
         fetchAppointments(),
         fetchPatients(),
         fetchDoctors(),
-        loadMotifs()
       ]);
     } catch (error) {
       console.error('Erreur lors du chargement des données:', error);
@@ -121,18 +122,6 @@ const AppointmentsPage = () => {
       setDoctors(data || []);
     } catch (error) {
       console.error('Erreur lors du chargement des médecins:', error);
-    }
-  };
-
-  const loadMotifs = async () => {
-    try {
-      const motifs = await motifsConsultationService.getMotifsForSelect('Dentiste');
-      setMotifsList(motifs);
-    } catch (error) {
-      console.error('Erreur lors du chargement des motifs:', error);
-      // Utiliser les motifs par défaut en cas d'erreur
-      const defaultMotifs = motifsConsultationService.getDefaultMotifsForSelect();
-      setMotifsList(defaultMotifs);
     }
   };
 
@@ -226,7 +215,9 @@ const AppointmentsPage = () => {
         patient_id: parseInt(formData.patient_id),
         medecin_id: parseInt(formData.medecin_id),
         date_heure: new Date(formData.date_heure).toISOString(),
-        motif: formData.motif || 'Consultation',
+        motif: resolveAppointmentMotif(formData.motif, formData.motif_autre),
+        type_rdv: formData.type_rdv || 'consultation',
+        priorite: formData.priorite || 'normale',
         statut: formData.statut || 'confirme',
         duree: parseInt(formData.duree) || 30,
         notes: formData.notes || null
@@ -363,9 +354,12 @@ const AppointmentsPage = () => {
       medecin_id: appointment.medecin_id,
       date_heure: appointment.date_heure,
       motif: appointment.motif || '',
+      motif_autre: '',
+      type_rdv: appointment.type_rdv || 'consultation',
+      priorite: appointment.priorite || 'normale',
       duree: appointment.duree || 30,
       statut: appointment.statut,
-      notes: appointment.notes || ''
+      notes: appointment.notes || '',
     });
     setShowForm(true);
   };
@@ -393,9 +387,12 @@ const AppointmentsPage = () => {
       medecin_id: '',
       date_heure: '',
       motif: '',
+      motif_autre: '',
+      type_rdv: 'consultation',
+      priorite: 'normale',
       duree: 30,
       statut: 'confirme',
-      notes: ''
+      notes: '',
     });
   };
 
@@ -686,22 +683,15 @@ const AppointmentsPage = () => {
                 </div>
               </div>
               
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Motif</label>
-                <select
-                  value={formData.motif}
-                  onChange={(e) => setFormData({...formData, motif: e.target.value})}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-medical-primary focus:border-transparent"
-                >
-                  <option value="">Sélectionner un motif...</option>
-                  {motifsList.map((motif) => (
-                    <option key={motif.value} value={motif.value}>
-                      {motif.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              
+              <AppointmentTypeMotifFields
+                typeRdv={formData.type_rdv}
+                motif={formData.motif}
+                motifAutre={formData.motif_autre}
+                priorite={formData.priorite}
+                showPriorite
+                onChange={(fields) => setFormData((prev) => ({ ...prev, ...fields }))}
+              />
+
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Statut</label>
                 <select

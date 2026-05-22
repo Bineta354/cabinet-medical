@@ -5,6 +5,10 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 import CreateRdvModal from './CreateRdvModal';
+import {
+  computeQueueStats,
+  isPresentInQueueStatus,
+} from '../../utils/waitingQueueStatus';
 import { 
   Users, 
   Clock, 
@@ -311,11 +315,14 @@ const DoctorDashboard = () => {
 
       // Statistiques basées sur les données transformées
       const transformedQueueForStats = queueData || [];
+      const computed = computeQueueStats(transformedQueueForStats);
       const queueStats = {
-        totalWaiting: transformedQueueForStats.filter(q => ['arrive', 'present', 'waiting'].includes(q.status)).length || 0,
-        inConsultation: transformedQueueForStats.filter(q => q.status === 'in_consultation').length || 0,
-        newPatients: transformedQueueForStats.filter(q => ['arrive', 'present'].includes(q.status)).length || 0,
-        consultationsFinished: (finishedWq || []).length || 0
+        totalWaiting: computed.onBench,
+        inConsultation: computed.inConsultation,
+        newPatients: transformedQueueForStats.filter((q) =>
+          isPresentInQueueStatus(q.status),
+        ).length,
+        consultationsFinished: (finishedWq || []).length || 0,
       };
       setStats(queueStats);
 
