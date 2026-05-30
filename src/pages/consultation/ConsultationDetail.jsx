@@ -354,7 +354,8 @@ const ConsultationDetail = () => {
           patient_id: patient.id,
           motif: (rdvForm.motif || 'Suivi').substring(0, 50),
           duree: rdvForm.duree,
-          suggested_date: rdvForm.date_heure
+          suggested_date: rdvForm.date_heure,
+          specialite: userProfile?.specialite || ''
         }
       });
 

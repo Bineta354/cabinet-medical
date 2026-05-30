@@ -114,7 +114,8 @@ const NotificationPanel = ({ onNotificationAction }) => {
         motif: meta?.motif,
         suggestedDate: meta?.suggested_date,
         duree: meta?.duree,
-        medecinId: notification.medecin_id
+        medecinId: notification.medecin_id,
+        specialite: meta?.specialite
       }
     });
 
