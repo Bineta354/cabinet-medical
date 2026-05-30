@@ -391,8 +391,9 @@ export const getUnreadNotifications = async (userId, userRole) => {
       .eq('lu', false)
       .order('created_at', { ascending: false });
 
+    // Filtrer par tenant_id seulement si le cabinetId existe et n'est pas null
     if (cabinetId) {
-      query = query.eq('tenant_id', cabinetId);
+      query = query.or(`tenant_id.eq.${cabinetId},tenant_id.is.null`);
     }
 
     query = applyNotificationRoleFilters(query, userId, userRole);
