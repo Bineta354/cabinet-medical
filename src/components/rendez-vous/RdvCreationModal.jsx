@@ -181,12 +181,23 @@ const RdvCreationModal = ({
   }, [formData.date_heure, isOpen]);
 
   const initializeModal = () => {
+    console.log('[RdvCreationModal] initializeModal appelé', {
+      initialPatientId,
+      initialDoctorId,
+      initialDate,
+      initialSpecialty,
+      initialMotif,
+      initialDuration
+    });
+
     // Si restrictToCurrentDoctor est activé, forcer le médecin connecté
     let doctorId = editingAppointment?.medecin_id ?? initialDoctorId ?? '';
     if (restrictToCurrentDoctor && userProfile?.id) {
       doctorId = String(userProfile.id);
     }
     const patientId = editingAppointment?.patient_id ?? initialPatientId ?? '';
+
+    console.log('[RdvCreationModal] patientId calculé:', patientId, 'doctorId calculé:', doctorId);
 
     const baseDateTime = editingAppointment?.date_heure
       ? new Date(editingAppointment.date_heure)
