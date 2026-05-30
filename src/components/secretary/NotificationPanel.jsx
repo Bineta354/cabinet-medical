@@ -104,7 +104,10 @@ const NotificationPanel = ({ onNotificationAction }) => {
 
   const handleScheduleAction = async (notification) => {
     console.log('🔔 [NotificationPanel] Planifier cliqué', notification);
+    console.log('🔔 [NotificationPanel] notification.metadata:', notification.metadata);
+    console.log('🔔 [NotificationPanel] notification.data:', notification.data);
     const meta = getNotificationMeta(notification);
+    console.log('🔔 [NotificationPanel] meta extrait:', meta);
 
     // Naviguer vers le calendrier avec les données de la notification
     navigate('/secretary-calendar', {
