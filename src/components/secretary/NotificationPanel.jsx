@@ -135,9 +135,9 @@ const NotificationPanel = ({ onNotificationAction }) => {
           return (
         <div
           key={notification.id}
-          className={`bg-white border-l-4 rounded-lg shadow-lg p-4 animate-pulse ${
-            notification.type_notification === 'call_patient' 
-              ? 'border-orange-500 bg-orange-50' 
+          className={`bg-white border-l-4 rounded-lg shadow-lg p-4 ${
+            notification.type_notification === 'call_patient'
+              ? 'border-orange-500 bg-orange-50'
               : notification.type_notification === 'appointment_request'
                 ? 'border-purple-500 bg-purple-50'
                 : 'border-blue-500 bg-blue-50'
