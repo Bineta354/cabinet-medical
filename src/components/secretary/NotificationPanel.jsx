@@ -30,6 +30,7 @@ const NotificationPanel = ({ onNotificationAction }) => {
   };
 
   useEffect(() => {
+    console.log('🔔 [NotificationPanel] useEffect déclenché', { userProfileId: userProfile?.id, userRole: userProfile?.role });
     if (userProfile?.id && userProfile?.role) {
       loadNotifications();
       const cleanup = setupRealtimeSubscription();
@@ -39,8 +40,10 @@ const NotificationPanel = ({ onNotificationAction }) => {
 
   const loadNotifications = async () => {
     try {
+      console.log('🔔 [NotificationPanel] Chargement des notifications...', { userId: userProfile?.id, role: userProfile?.role });
       if (!userProfile?.id || !userProfile?.role) return;
       const data = await getUnreadNotifications(userProfile.id, userProfile.role);
+      console.log('🔔 [NotificationPanel] Notifications reçues:', data);
       setNotifications(data || []);
       setIsVisible(data && data.length > 0);
     } catch (error) {
