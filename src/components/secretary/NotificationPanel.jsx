@@ -30,11 +30,22 @@ const NotificationPanel = ({ onNotificationAction }) => {
   };
 
   useEffect(() => {
-    console.log('🔔 [NotificationPanel] useEffect déclenché', { userProfileId: userProfile?.id, userRole: userProfile?.role });
+    console.log('🔔 [NotificationPanel] useEffect déclenché', { 
+      userProfileId: userProfile?.id, 
+      userRole: userProfile?.role,
+      hasId: !!userProfile?.id,
+      hasRole: !!userProfile?.role
+    });
     if (userProfile?.id && userProfile?.role) {
+      console.log('🔔 [NotificationPanel] Conditions remplies, appel de loadNotifications');
       loadNotifications();
       const cleanup = setupRealtimeSubscription();
       return cleanup;
+    } else {
+      console.log('🔔 [NotificationPanel] Conditions NON remplies', {
+        id: userProfile?.id,
+        role: userProfile?.role
+      });
     }
   }, [userProfile?.id, userProfile?.role]);
 
