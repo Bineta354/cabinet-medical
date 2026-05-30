@@ -4,6 +4,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useLayoutPreferences } from '../hooks/useLayoutPreferences';
 import Sidebar from './Sidebar';
 import Header from './Header';
+import SecretaryNotificationPanel from './secretary/NotificationPanel';
 
 const FULL_HEIGHT_ROUTES = ['/secretary-calendar', '/my-calendar'];
 
@@ -82,6 +83,7 @@ const Layout = ({ children }) => {
         >
           {children}
         </main>
+        {userRole === 'secretary' && <SecretaryNotificationPanel />}
       </div>
     </div>
   );
