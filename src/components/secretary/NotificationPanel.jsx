@@ -3,11 +3,9 @@ import { Bell, PhoneCall, CheckCircle, X, AlertCircle, CalendarPlus } from 'luci
 import { useAuth } from '../../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom'; // Importez useNavigate
 import { getUnreadNotifications, markAsRead, subscribeToNotifications, unsubscribeFromNotifications } from '../../lib/notifications';
-import useUserProfile from '../../hooks/useUserProfile';
 
 const NotificationPanel = ({ onNotificationAction }) => {
-  const { currentUser } = useAuth();
-  const { userProfile } = useUserProfile();
+  const { currentUser, userProfile } = useAuth();
   const [notifications, setNotifications] = useState([]);
   const navigate = useNavigate(); // Initialisez useNavigate
   const [isVisible, setIsVisible] = useState(false);
