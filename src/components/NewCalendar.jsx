@@ -17,6 +17,7 @@ const NewCalendar = ({
   selectedDoctorFilter,
   disableDoctorFilter = false,
   fillViewport = false,
+  notificationData = null,
 }) => {
   const [showStats, setShowStats] = useState(!fillViewport)
   const {
@@ -87,6 +88,7 @@ const NewCalendar = ({
   } = useNewCalendar({
     selectedDoctorFilter,
     disableDoctorFilter,
+    notificationData,
   })
 
   const fullCalendarView = resolveFullCalendarView()

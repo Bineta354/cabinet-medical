@@ -104,6 +104,7 @@ export const useNewCalendar = ({
   initialView = 'timeGridWeek',
   selectedDoctorFilter = 'all',
   disableDoctorFilter = false,
+  notificationData = null,
 }) => {
   const { currentUser, userProfile } = useAuth()
 
@@ -196,6 +197,30 @@ export const useNewCalendar = ({
     const timeout = setTimeout(() => setAnimatedStats(true), 100)
     return () => clearTimeout(timeout)
   }, [])
+
+  // Gérer les données de notification pour ouvrir le modal avec les données pré-remplies
+  useEffect(() => {
+    if (notificationData) {
+      console.log('📅 [useNewCalendar] Données de notification reçues:', notificationData);
+      
+      // Pré-remplir les champs du modal
+      if (notificationData.patientId) {
+        setModalInitialPatientId(notificationData.patientId);
+      }
+      if (notificationData.suggestedDate) {
+        setModalInitialDate(new Date(notificationData.suggestedDate));
+      }
+      if (notificationData.duree) {
+        setModalInitialDuration(notificationData.duree);
+      }
+      if (notificationData.motif) {
+        // Le motif sera géré dans le RdvCreationModal
+      }
+      
+      // Ouvrir le modal
+      setShowAppointmentModal(true);
+    }
+  }, [notificationData])
 
   const medecinsById = useMemo(() => {
     const map = new Map()
