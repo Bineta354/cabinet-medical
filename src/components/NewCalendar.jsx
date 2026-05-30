@@ -374,6 +374,7 @@ const NewCalendar = ({
         initialPatientId={modalInitialPatientId}
         initialDuration={modalInitialDuration}
         initialSpecialty={modalInitialSpecialty}
+        initialMotif={notificationData?.motif}
         editingAppointment={editingAppointment}
         createAppointment={createAppointment}
         updateAppointment={updateAppointment}

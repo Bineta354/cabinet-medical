@@ -105,18 +105,19 @@ const NotificationPanel = ({ onNotificationAction }) => {
   const handleScheduleAction = async (notification) => {
     console.log('🔔 [NotificationPanel] Planifier cliqué', notification);
     const meta = getNotificationMeta(notification);
-    
+
     // Naviguer vers le calendrier avec les données de la notification
-    navigate('/secretary-calendar', { 
-      state: { 
+    navigate('/secretary-calendar', {
+      state: {
         patientId: meta?.patient_id,
         patientName: meta?.patient_name || `${meta?.patient_prenom} ${meta?.patient_nom}`,
         motif: meta?.motif,
         suggestedDate: meta?.suggested_date,
-        duree: meta?.duree
+        duree: meta?.duree,
+        medecinId: notification.medecin_id
       }
     });
-    
+
     await markAsRead(notification.id);
     loadNotifications();
   };

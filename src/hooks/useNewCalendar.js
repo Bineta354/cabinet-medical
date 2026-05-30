@@ -202,7 +202,7 @@ export const useNewCalendar = ({
   useEffect(() => {
     if (notificationData) {
       console.log('📅 [useNewCalendar] Données de notification reçues:', notificationData);
-      
+
       // Pré-remplir les champs du modal
       if (notificationData.patientId) {
         setModalInitialPatientId(notificationData.patientId);
@@ -216,7 +216,10 @@ export const useNewCalendar = ({
       if (notificationData.motif) {
         // Le motif sera géré dans le RdvCreationModal
       }
-      
+      if (notificationData.medecinId) {
+        setModalInitialDoctorId(notificationData.medecinId);
+      }
+
       // Ouvrir le modal
       setShowAppointmentModal(true);
     }
