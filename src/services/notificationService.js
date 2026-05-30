@@ -136,6 +136,7 @@ export const notificationService = {
         message: notificationData.message,
         priorite: notificationData.priorite || 'normale',
         lu: false,
+        metadata: notificationData.data || null, // Stocker les métadonnées complètes
         tenant_id: tenantId // Inclure tenant_id pour le multi-tenant
       }));
 
