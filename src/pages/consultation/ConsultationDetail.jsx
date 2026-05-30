@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 import { appointmentService } from '../../lib/services';
-import { sendNotification, NOTIFICATION_TYPES } from '../../lib/notifications';
+import { notificationService, NOTIFICATION_TYPES } from '../../services/notificationService';
 import { useConsultationData } from '../../hooks/consultation/useConsultationData';
 import { createConsultationFromModele } from '../../services/consultation/referenceDataService';
 import ConstantesTab from '../../components/consultation/ConstantesTab';
@@ -355,17 +355,18 @@ const ConsultationDetail = () => {
       console.log('🔄 [Consultation] Envoi demande RDV de suivi à la secrétaire');
 
       // Envoyer une notification à la secrétaire avec les détails du rendez-vous demandé
-      await sendNotification({
+      await notificationService.notifySecretary({
         type: 'appointment_request',
-        recipient_role: 'secretary',
-        title: `Demande de rendez-vous pour ${patient.prenom} ${patient.nom}`,
-        message: `Le Dr ${userProfile?.nom || ''} souhaite planifier un rendez-vous de suivi pour ${patient.prenom} ${patient.nom}. Date suggérée: ${new Date(rdvForm.date_heure).toLocaleDateString('fr-FR')} à ${new Date(rdvForm.date_heure).toLocaleTimeString('fr-FR', {hour: '2-digit', minute: '2-digit'})}. Motif: ${rdvForm.motif || 'Suivi consultation'}. Durée: ${rdvForm.duree} minutes.`,
-        patient_id: patient.id,
-        consultation_id: consultation.id,
-        medecin_id: consultation.medecin_id,
-        suggested_date: rdvForm.date_heure,
-        motif: rdvForm.motif || 'Suivi consultation',
-        duree: rdvForm.duree,
+        titre: `Demande RDV ${patient.prenom} ${patient.nom}`,
+        message: `Dr ${userProfile?.nom || ''} - RDV suivi ${patient.prenom} ${patient.nom} - ${new Date(rdvForm.date_heure).toLocaleDateString('fr-FR')} ${new Date(rdvForm.date_heure).toLocaleTimeString('fr-FR', {hour: '2-digit', minute: '2-digit'})} - ${(rdvForm.motif || 'Suivi').substring(0, 50)} - ${rdvForm.duree}min`,
+        priorite: 'normale',
+        data: {
+          medecin_id: consultation.medecin_id,
+          patient_id: patient.id,
+          motif: (rdvForm.motif || 'Suivi').substring(0, 50),
+          duree: rdvForm.duree,
+          suggested_date: rdvForm.date_heure
+        }
       });
 
       setShowCreateRdvModal(false);
