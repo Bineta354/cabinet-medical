@@ -187,6 +187,11 @@ const NotificationPanel = ({ onNotificationAction }) => {
                     Patient: {patientName}
                   </p>
                 )}
+                {meta?.suggested_date && (
+                  <p className="text-xs text-purple-600 mt-1 font-medium">
+                    Date suggérée: {new Date(meta.suggested_date).toLocaleDateString('fr-FR')} à {new Date(meta.suggested_date).toLocaleTimeString('fr-FR', {hour: '2-digit', minute: '2-digit'})}
+                  </p>
+                )}
               </div>
             </div>
             
