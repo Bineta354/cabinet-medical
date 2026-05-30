@@ -103,10 +103,20 @@ const NotificationPanel = ({ onNotificationAction }) => {
   };
 
   const handleScheduleAction = async (notification) => {
-    if (onNotificationAction) {
-      const meta = getNotificationMeta(notification);
-      onNotificationAction('open_rdv_modal', meta || {});
-    }
+    console.log('🔔 [NotificationPanel] Planifier cliqué', notification);
+    const meta = getNotificationMeta(notification);
+    
+    // Naviguer vers le calendrier avec les données de la notification
+    navigate('/secretary-calendar', { 
+      state: { 
+        patientId: meta?.patient_id,
+        patientName: meta?.patient_name || `${meta?.patient_prenom} ${meta?.patient_nom}`,
+        motif: meta?.motif,
+        suggestedDate: meta?.suggested_date,
+        duree: meta?.duree
+      }
+    });
+    
     await markAsRead(notification.id);
     loadNotifications();
   };
