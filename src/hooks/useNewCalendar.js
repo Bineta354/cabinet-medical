@@ -218,12 +218,18 @@ export const useNewCalendar = ({
       }
       if (notificationData.medecinId) {
         setModalInitialDoctorId(notificationData.medecinId);
+
+        // Récupérer la spécialité du médecin
+        const doctor = medecins.find(m => String(m.id) === String(notificationData.medecinId));
+        if (doctor?.specialite) {
+          setModalInitialSpecialty(doctor.specialite);
+        }
       }
 
       // Ouvrir le modal
       setShowAppointmentModal(true);
     }
-  }, [notificationData])
+  }, [notificationData, medecins])
 
   const medecinsById = useMemo(() => {
     const map = new Map()
