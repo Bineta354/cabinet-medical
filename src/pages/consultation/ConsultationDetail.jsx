@@ -227,28 +227,17 @@ const ConsultationDetail = () => {
       }
 
       console.log('📤 [Consultation] Envoi de la notification à la secrétaire...');
-      const { data: secretaireData } = await supabase
-        .from('users')
-        .select('id')
-        .eq('role', 'secretary')
-        .eq('actif', true)
-        .limit(1)
-        .single();
-
-      if (secretaireData) {
-        await sendNotification(
-          NOTIFICATION_TYPES.CONSULTATION_ENDED,
-          consultation.medecin_id,
-          secretaireData.id,
-          consultation.id,
-          `${patient.prenom} ${patient.nom}`,
-          {
-            patientId: consultation.patient_id,
-          }
-        );
-      } else {
-        console.warn("Aucune secrétaire active trouvée pour la notification.");
-      }
+      await notificationService.notifySecretary({
+        type: 'consultation_terminee',
+        titre: 'Consultation Terminée',
+        message: `Consultation de ${patient.prenom} ${patient.nom} terminée par Dr ${userProfile?.nom || ''}`,
+        priorite: 'normale',
+        data: {
+          medecin_id: consultation.medecin_id,
+          patient_id: consultation.patient_id,
+          consultation_id: consultation.id
+        }
+      });
 
       console.log('📝 [Consultation] Mise à jour du statut de la consultation...');
       const { data: updatedConsultation, error: cErr } = await supabase
