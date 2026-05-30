@@ -86,6 +86,14 @@ const RdvCreationModal = ({
   const [quickBooking, setQuickBooking] = useState(defaultQuickBooking);
   const [manualDate, setManualDate] = useState(initialDate);
   const [manualTime, setManualTime] = useState('');
+
+  // Mettre à jour manualDate quand initialDate change
+  useEffect(() => {
+    if (initialDate) {
+      setManualDate(initialDate);
+    }
+  }, [initialDate]);
+
   useEffect(() => {
     if (!isOpen) return;
     if (!manualTime) return;
