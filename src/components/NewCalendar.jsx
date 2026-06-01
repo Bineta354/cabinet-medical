@@ -324,14 +324,10 @@ const NewCalendar = ({
                     hour12: false,
                   }}
                   dayHeaderFormat={{
-                    weekday: 'short',
+                    weekday: 'long',
                     day: 'numeric',
                   }}
-                  dayHeaderContent={(arg) => {
-                    const date = arg.date;
-                    const dayNum = date.getDate();
-                    return `${arg.date.toLocaleDateString('fr-FR', { weekday: 'long' })} ${dayNum}`;
-                  }}
+                  dayHeaderContent={() => null}
                   slotLabelFormat={{
                     hour: '2-digit',
                     minute: '2-digit',
