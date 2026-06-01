@@ -306,7 +306,7 @@ const NewCalendar = ({
                   }
                   dayCellClassNames={dayCellClassNames}
                   fixedWeekCount={false}
-                  showNonCurrentDates
+                  showNonCurrentDates={false}
                   dayMaxEventRows={isMonthView ? 3 : false}
                   moreLinkClick="popover"
                   eventMaxStack={isMonthView ? 2 : undefined}
