@@ -325,9 +325,7 @@ const NewCalendar = ({
                   }}
                   dayHeaderFormat={{
                     weekday: 'long',
-                    day: 'numeric',
                   }}
-                  dayHeaderContent={() => null}
                   slotLabelFormat={{
                     hour: '2-digit',
                     minute: '2-digit',
