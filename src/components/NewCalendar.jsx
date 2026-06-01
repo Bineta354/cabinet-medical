@@ -300,13 +300,13 @@ const NewCalendar = ({
                       ? {
                           startTime: '08:00',
                           endTime: '18:00',
-                          daysOfWeek: [1, 2, 3, 4, 5, 6],
+                          daysOfWeek: [0, 1, 2, 3, 4, 5, 6],
                         }
                       : undefined
                   }
                   dayCellClassNames={dayCellClassNames}
                   fixedWeekCount={false}
-                  showNonCurrentDates={false}
+                  showNonCurrentDates
                   dayMaxEventRows={isMonthView ? 3 : false}
                   moreLinkClick="popover"
                   eventMaxStack={isMonthView ? 2 : undefined}
@@ -337,11 +337,10 @@ const NewCalendar = ({
                   selectMirror={isTimeGridView}
                   eventClassNames="google-calendar-event cursor-pointer"
                   businessHours={{
-                    daysOfWeek: [1, 2, 3, 4, 5, 6],
+                    daysOfWeek: [0, 1, 2, 3, 4, 5, 6],
                     startTime: '08:00',
                     endTime: '18:00',
                   }}
-                  hiddenDays={[0]}
                   nowIndicator
                   scrollTime="08:00:00"
                   expandRows
