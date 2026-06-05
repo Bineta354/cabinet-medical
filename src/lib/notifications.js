@@ -258,7 +258,9 @@ export const sendNotification = async (type, senderId, receiverId, consultationI
 const generateNotificationMessage = (type, patientName, medecinName) => {
   switch (type) {
     case NOTIFICATION_TYPES.PATIENT_READY:
-      return `Je reçois le patient ${patientName}`;
+      return medecinName 
+        ? `${medecinName} demande à introduire ${patientName}`
+        : `Le médecin demande à introduire ${patientName}`;
     case NOTIFICATION_TYPES.PATIENT_ON_WAY:
       return `Le patient ${patientName} est en route`;
     case NOTIFICATION_TYPES.CONSULTATION_ENDED:

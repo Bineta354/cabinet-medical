@@ -149,7 +149,7 @@ const NotificationsRealtime = () => {
     switch (type) {
       case 'patient_arrive': return 'Patient arrivé';
       case 'medecin_disponible': return 'Médecin disponible';
-      case 'patient_envoye': return 'Patient en route';
+      case 'patient_envoye': return 'Patient appelé';
       case 'consultation_terminee': return 'Consultation terminée';
       case 'document_scanne': return 'Document scanné';
       case 'urgence': return 'Urgence';
@@ -469,7 +469,7 @@ const NotificationsRealtime = () => {
                       <button
                         onClick={() => deleteNotification(notification.id)}
                         className="p-2 text-gray-400 hover:text-red-600 transition-colors"
-                        title="Supprimer"
+                        title="Retirer"
                       >
                         <Trash2 className="w-4 h-4" />
                       </button>

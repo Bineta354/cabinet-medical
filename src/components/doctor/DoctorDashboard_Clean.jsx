@@ -282,7 +282,7 @@ const DoctorDashboard = () => {
                         {currentPatient.status === 'present' ? 'Arrivé' :
                          currentPatient.status === 'authorized' ? 'Autorisé' :
                          currentPatient.status === 'medecin_pret' ? 'Médecin prêt' :
-                         currentPatient.status === 'en_route' ? 'En route' :
+                         currentPatient.status === 'en_route' ? 'Patient appelé' :
                          currentPatient.status === 'in_consultation' ? 'En consultation' :
                          currentPatient.status}
                       </span>

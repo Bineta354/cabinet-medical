@@ -91,7 +91,7 @@ const RappelsSmsPage = () => {
         .select(`
           *,
           patient:patients(*),
-          medecin:users(*)
+          medecin:users!inner(*)
         `)
         .gte('date_heure', `${tomorrowStr}T00:00:00`)
         .lt('date_heure', `${tomorrowStr}T23:59:59`)
@@ -499,11 +499,11 @@ const RappelsSmsPage = () => {
                 <div className="flex space-x-2">
                   <button className="text-blue-600 hover:text-blue-800 text-sm">
                     <Edit className="w-3 h-3 inline mr-1" />
-                    Modifier
+                    Mettre à jour
                   </button>
                   <button className="text-red-600 hover:text-red-800 text-sm">
                     <Trash2 className="w-3 h-3 inline mr-1" />
-                    Supprimer
+                    Retirer
                   </button>
                 </div>
               </div>

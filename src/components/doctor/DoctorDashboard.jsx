@@ -492,38 +492,53 @@ const DoctorDashboard = () => {
             throw new Error('ID du médecin manquant');
           }
 
-          // Si pas de patientId, chercher le premier patient arrivé
-          if (!patientId) {
-            const firstArrivedPatient = waitingQueue.find(p => p.status === 'arrive');
-            if (!firstArrivedPatient) {
-              unifiedNotificationService.error('Aucun patient en attente trouvé');
-              break;
-            }
-            patientId = firstArrivedPatient.waiting_queue_id || firstArrivedPatient.id;
-            console.log('Patient trouvé automatiquement:', patientId);
+          // Vérifier que le patient existe
+          const patient = waitingQueue.find(p => p.id === patientId || p.waiting_queue_id === patientId);
+          if (!patient) {
+            unifiedNotificationService.error('Patient non trouvé ou déjà en cours de traitement');
+            break;
           }
 
-          if (!confirmTransition(patientId, 'en_route', 'recevoir le patient')) {
-            return;
+          // Réinitialiser les autres patients du médecin à 'waiting' avant de démarrer la consultation
+          // pour garantir qu'un seul patient est en consultation à la fois
+          try {
+            await supabase
+              .from('waiting_queue')
+              .update({ 
+                status: 'waiting',
+                updated_at: new Date().toISOString()
+              })
+              .eq('medecin_id', userProfile.id)
+              .neq('id', patientId)
+              .in('status', ['authorized', 'en_route', 'present', 'arrive']);
+          } catch (error) {
+            console.error('Erreur lors de la réinitialisation des autres patients:', error);
           }
 
-          // Utiliser la fonction SQL pour recevoir le patient
-          const { data: result, error: receiveError } = await supabase
-            .rpc('medecin_recoit_patient', {
-              p_waiting_queue_id: patientId,
-              p_medecin_id: userProfile.id
-            });
+          // PAS de validation workflow - la secrétaire a déjà confirmé l'introduction
+          // Le médecin peut recevoir directement le patient sans nouvelle autorisation
 
-          if (receiveError) {
-            console.error('Erreur fonction SQL:', receiveError);
-            throw new Error(`Erreur lors de la réception: ${receiveError.message}`);
+          // Mettre directement le statut à 'in_consultation' sans passer par 'authorized'
+          const { error: updateError } = await supabase
+            .from('waiting_queue')
+            .update({ 
+              status: 'in_consultation',
+              consultation_started_at: new Date().toISOString(),
+              updated_at: new Date().toISOString()
+            })
+            .eq('id', patientId)
+            .eq('medecin_id', userProfile.id);
+
+          if (updateError) {
+            console.error('Erreur mise à jour statut consultation:', updateError);
+            throw new Error(`Erreur lors du démarrage de la consultation: ${updateError.message}`);
           }
 
-          if (!result.success) {
-            throw new Error(result.error);
-          }
+          // Fixer ce patient comme patient actuel
+          setSelectedCurrentPatientId(patientId);
+          localStorage.setItem(`doctor_${userProfile?.id}_current_patient`, patientId);
 
-          unifiedNotificationService.success(`✅ ${result.message}. La secrétaire a été notifiée.`);
+          unifiedNotificationService.success('✅ Consultation démarrée');
           break;
         }
         case 'consultation': {
@@ -531,7 +546,7 @@ const DoctorDashboard = () => {
             return;
           }
 
-          // Démarrer la consultation si le patient est en route
+          // Démarrer la consultation si le patient est appelé
           try {
             const target = waitingQueue.find(p => p.id === patientId || p.waiting_queue_id === patientId);
             if (target && target.status === 'en_route') {
@@ -771,11 +786,13 @@ const DoctorDashboard = () => {
     if (selectedCurrentPatientId) {
       const manuallySelected = waitingQueue.find(p => 
         (p.id === selectedCurrentPatientId || p.waiting_queue_id === selectedCurrentPatientId) &&
-        ['arrive', 'in_consultation', 'present', 'waiting'].includes(p.status)
+        ['arrive', 'in_consultation', 'present', 'waiting', 'authorized', 'en_route'].includes(p.status)
       );
       if (manuallySelected) {
         return manuallySelected;
       }
+      // Si le patient sélectionné n'existe plus ou n'a plus un statut valide, ne pas changer automatiquement
+      return null;
     }
     
     // Sinon, utiliser la logique automatique (patient en consultation en priorité)
@@ -784,24 +801,47 @@ const DoctorDashboard = () => {
       return inConsultation;
     }
     
-    // Puis patient arrivé
-    return waitingQueue.find(p => ['arrive', 'present'].includes(p.status));
+    // Puis patient arrivé/en_route/authorized (un seul à la fois)
+    const available = waitingQueue.find(p => ['arrive', 'present', 'authorized', 'en_route'].includes(p.status));
+    return available;
   })();
   
   // Fonction pour sélectionner manuellement un patient actuel
-  const handleSelectCurrentPatient = (patientId) => {
+  const handleSelectCurrentPatient = async (patientId) => {
     console.log('Sélection manuelle du patient actuel:', patientId);
-    setSelectedCurrentPatientId(patientId);
     
-    // Sauvegarder dans le localStorage pour persistance
     if (patientId) {
-      localStorage.setItem(`doctor_${userProfile?.id}_current_patient`, patientId);
+      // Vérifier que le patient existe
       const patient = waitingQueue.find(p => 
         (p.id === patientId || p.waiting_queue_id === patientId)
       );
-      const patientName = patient ? `${patient.patient_prenom} ${patient.patient_nom}` : 'Patient';
+      if (!patient) {
+        unifiedNotificationService.error('Patient non trouvé dans la file d\'attente');
+        return;
+      }
+      
+      // Mettre à jour la base de données : réinitialiser les autres patients du médecin à 'waiting'
+      // pour garantir qu'un seul patient peut être "actuel" à la fois
+      try {
+        await supabase
+          .from('waiting_queue')
+          .update({ 
+            status: 'waiting',
+            updated_at: new Date().toISOString()
+          })
+          .eq('medecin_id', userProfile.id)
+          .neq('id', patientId)
+          .in('status', ['authorized', 'en_route', 'present', 'arrive']);
+      } catch (error) {
+        console.error('Erreur lors de la réinitialisation des autres patients:', error);
+      }
+      
+      setSelectedCurrentPatientId(patientId);
+      localStorage.setItem(`doctor_${userProfile?.id}_current_patient`, patientId);
+      const patientName = `${patient.patient_prenom} ${patient.patient_nom}`;
       unifiedNotificationService.success(`${patientName} défini comme patient actuel`);
     } else {
+      setSelectedCurrentPatientId(null);
       localStorage.removeItem(`doctor_${userProfile?.id}_current_patient`);
       unifiedNotificationService.info('Mode automatique activé');
     }
@@ -1170,7 +1210,8 @@ currentPatient.status}
 </div>
 
 <div className="flex space-x-2">
-{currentPatient.status === 'arrive' && (
+{/* Bouton Recevoir ce patient - pour statuts arrive/en_route/authorized */}
+{(currentPatient.status === 'arrive' || currentPatient.status === 'en_route' || currentPatient.status === 'authorized') && (
 <button
 onClick={() => {
   const patientId = currentPatient.waiting_queue_id || currentPatient.id;
@@ -1184,23 +1225,6 @@ className="flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:
 >
 <Shield className="w-4 h-4 mr-2" />
 Recevoir
-</button>
-)}
-
-{currentPatient.status === 'en_route' && (
-<button
-onClick={() => {
-  const patientId = currentPatient.waiting_queue_id || currentPatient.id;
-  if (!patientId) {
-    unifiedNotificationService.error('ID du patient manquant');
-    return;
-  }
-  handlePatientAction(patientId, 'start');
-}}
-className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
->
-<Stethoscope className="w-4 h-4 mr-2" />
-Commencer consultation
 </button>
 )}
 

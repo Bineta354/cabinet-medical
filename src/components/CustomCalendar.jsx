@@ -152,6 +152,7 @@ const CustomCalendar = ({ selectedDoctorFilter = 'all' }) => {
           .from('users')
           .select('specialite')
           .eq('role', 'doctor')
+          .eq('actif', true)
           .not('specialite', 'is', null);
 
         if (medecinsData) {
@@ -686,15 +687,85 @@ const CustomCalendar = ({ selectedDoctorFilter = 'all' }) => {
     const slotDate = new Date(selectedDate);
     slotDate.setHours(parseInt(hours), parseInt(minutes), 0, 0);
     
-    // Ne retourner que les RDV qui démarrent exactement à ce créneau (évite les doublons visuels)
+    // Retourner tous les RDV qui se chevauchent avec ce créneau
     return filteredAppointments.filter(apt => {
       const aptDate = new Date(apt.date_heure);
+      const aptDuration = apt.duree || 30;
+      const aptEndDate = new Date(aptDate.getTime() + aptDuration * 60000);
+      
       return (
         aptDate.toDateString() === slotDate.toDateString() &&
-        aptDate.getHours() === slotDate.getHours() &&
-        aptDate.getMinutes() === slotDate.getMinutes()
+        aptDate <= slotDate &&
+        aptEndDate > slotDate
       );
     });
+  };
+
+  // Calculer la position et la hauteur d'un rendez-vous
+  const getAppointmentStyle = (appointment, allAppointments) => {
+    const aptDate = new Date(appointment.date_heure);
+    const aptDuration = appointment.duree || 30;
+    const aptEndDate = new Date(aptDate.getTime() + aptDuration * 60000);
+    
+    // Heure de début en minutes depuis minuit
+    const startMinutes = aptDate.getHours() * 60 + aptDate.getMinutes();
+    // Heure de début de la journée (8h = 480 minutes)
+    const dayStartMinutes = 8 * 60;
+    // Minutes depuis le début de la journée
+    const minutesFromStart = startMinutes - dayStartMinutes;
+    
+    // Hauteur du créneau (60px pour 30 minutes = 2px par minute)
+    const slotHeight = 60;
+    const pixelsPerMinute = slotHeight / 30;
+    
+    // Position verticale
+    const top = Math.max(0, minutesFromStart * pixelsPerMinute);
+    
+    // Hauteur basée sur la durée
+    const height = Math.max(30, aptDuration * pixelsPerMinute);
+    
+    // Gestion des chevauchements
+    const overlappingAppointments = allAppointments.filter(apt => {
+      if (apt.id === appointment.id) return false;
+      const otherDate = new Date(apt.date_heure);
+      const otherDuration = apt.duree || 30;
+      const otherEndDate = new Date(otherDate.getTime() + otherDuration * 60000);
+      
+      return (
+        aptDate.toDateString() === otherDate.toDateString() &&
+        aptDate < otherEndDate &&
+        aptEndDate > otherDate
+      );
+    });
+    
+    // Calculer la largeur et la position horizontale pour éviter les chevauchements
+    const maxColumns = Math.min(overlappingAppointments.length + 1, 4);
+    const columnWidth = 100 / maxColumns;
+    
+    // Trouver la colonne disponible pour ce rendez-vous
+    let columnIndex = 0;
+    const sortedAppointments = [...overlappingAppointments, appointment].sort((a, b) => 
+      new Date(a.date_heure) - new Date(b.date_heure)
+    );
+    
+    for (let i = 0; i < sortedAppointments.length; i++) {
+      if (sortedAppointments[i].id === appointment.id) {
+        columnIndex = i % maxColumns;
+        break;
+      }
+    }
+    
+    // Responsive : ajuster le left offset selon la taille de l'écran
+    const timeLabelWidth = window.innerWidth < 768 ? 60 : 80;
+    
+    return {
+      top: `${top}px`,
+      height: `${height}px`,
+      position: 'absolute',
+      left: `calc(${timeLabelWidth}px + ${columnIndex * columnWidth}%)`,
+      width: `${columnWidth}%`,
+      zIndex: columnIndex + 1,
+    };
   };
 
   // Statistiques simplifiées
@@ -886,9 +957,59 @@ const CustomCalendar = ({ selectedDoctorFilter = 'all' }) => {
                 </div>
 
                 {/* Grille des créneaux horaires */}
-                <div className="relative">
+                <div className="relative" style={{ minHeight: `${(22 - 8 + 1) * 60}px` }}>
+                  {/* Rendez-vous positionnés absolument */}
+                  <div className="absolute inset-0 pointer-events-none">
+                    {(() => {
+                      const dayAppointments = getAppointmentsForDate(selectedDate);
+                      return dayAppointments.map((apt, aptIndex) => {
+                        const medecin = apt.medecin || medecins.find(m => m.id === apt.medecin_id);
+                        const specialiteNom = medecin?.specialite || null;
+                        const style = getAppointmentStyle(apt, dayAppointments);
+                        
+                        return (
+                          <motion.div
+                            key={apt.id}
+                            initial={{ opacity: 0, scale: 0.9 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            transition={{ delay: aptIndex * 0.05 }}
+                            className={`group relative p-2 rounded-lg text-white text-sm cursor-pointer transition-all duration-200 hover:scale-[1.02] hover:shadow-lg pointer-events-auto ${getEventGradientClass(apt.statut, apt.priorite, specialiteNom)}`}
+                            style={style}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleEventClick(apt);
+                            }}
+                          >
+                            <div className="flex items-start justify-between gap-2">
+                              <div className="flex items-center gap-2">
+                                <div className="w-6 h-6 rounded-full bg-white/20 flex items-center justify-center text-[10px] font-bold flex-shrink-0">
+                                  {getInitials(apt.patient?.prenom, apt.patient?.nom)}
+                                </div>
+                                <div className="min-w-0">
+                                  <div className="font-semibold leading-tight truncate">
+                                    {apt.patient?.prenom} {apt.patient?.nom}
+                                  </div>
+                                  <div className="text-[11px] opacity-90 leading-tight">
+                                    {new Date(apt.date_heure).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })} • {apt.duree || 30}min
+                                  </div>
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-1 flex-shrink-0">
+                                {apt.priorite && (
+                                  <span className="px-2 py-0.5 rounded-full text-[10px] bg-white/20">
+                                    {apt.priorite === 'tres_urgente' ? 'Très urgente' : apt.priorite === 'urgente' ? 'Urgente' : 'Normale'}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          </motion.div>
+                        );
+                      });
+                    })()}
+                  </div>
+
+                  {/* Créneaux horaires de fond */}
                   {timeSlots.map((timeSlot, index) => {
-                    const appointments = getAppointmentsForTimeSlot(timeSlot);
                     const isCurrentTime = new Date().toDateString() === selectedDate.toDateString() && 
                       new Date().getHours() === parseInt(timeSlot.split(':')[0]) &&
                       Math.abs(new Date().getMinutes() - parseInt(timeSlot.split(':')[1])) <= 7;
@@ -896,7 +1017,7 @@ const CustomCalendar = ({ selectedDoctorFilter = 'all' }) => {
                     return (
                       <div
                         key={timeSlot}
-                        className={`relative border-b ${darkMode ? 'border-gray-800' : 'border-gray-100'} min-h-[60px] hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors cursor-pointer`}
+                        className={`relative border-b ${darkMode ? 'border-gray-800' : 'border-gray-100'} h-[60px] hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors cursor-pointer`}
                         onClick={() => handleTimeSlotClick(timeSlot)}
                       >
                         {/* Indicateur de l'heure actuelle */}
@@ -907,92 +1028,6 @@ const CustomCalendar = ({ selectedDoctorFilter = 'all' }) => {
                         {/* Heure */}
                         <div className={`absolute left-2 top-2 text-xs font-medium ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>
                           {timeSlot}
-                        </div>
-
-                        {/* Rendez-vous */}
-                        <div className="ml-20 pr-4 py-1">
-                          {appointments.map((apt, aptIndex) => {
-                            const medecin = apt.medecin || medecins.find(m => m.id === apt.medecin_id);
-                            const specialiteNom = medecin?.specialite || null;
-                            return (
-                            <motion.div
-                              key={apt.id}
-                              initial={{ opacity: 0, scale: 0.9 }}
-                              animate={{ opacity: 1, scale: 1 }}
-                              transition={{ delay: aptIndex * 0.1 }}
-                              className={`group relative mb-1 p-2 rounded-lg text-white text-sm cursor-pointer transition-all duration-200 hover:scale-[1.02] hover:shadow-lg ${getEventGradientClass(apt.statut, apt.priorite, specialiteNom)}`}
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleEventClick(apt);
-                              }}
-                            >
-                              <div className="flex items-start justify-between gap-2">
-                                <div className="flex items-center gap-2">
-                                  <div className="w-6 h-6 rounded-full bg-white/20 flex items-center justify-center text-[10px] font-bold">
-                                    {getInitials(apt.patient?.prenom, apt.patient?.nom)}
-                                  </div>
-                                  <div>
-                                    <div className="font-semibold leading-tight">
-                                      {apt.patient?.prenom} {apt.patient?.nom}
-                                    </div>
-                                    <div className="text-[11px] opacity-90 leading-tight">
-                                      {new Date(apt.date_heure).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })} • {apt.duree || 30}min
-                                    </div>
-                                  </div>
-                                </div>
-                                <div className="flex items-center gap-1">
-                                  {apt.priorite && (
-                                    <span className="px-2 py-0.5 rounded-full text-[10px] bg-white/20">
-                                      {apt.priorite === 'tres_urgente' ? 'Très urgente' : apt.priorite === 'urgente' ? 'Urgente' : 'Normale'}
-                                    </span>
-                                  )}
-                                  {apt.statut && apt.statut !== 'confirme' && (
-                                    <span className="px-2 py-0.5 rounded-full text-[10px] bg-black/20">
-                                      {apt.statut === 'en_attente' ? 'En attente' : apt.statut === 'annule' ? 'Annulé' : 'Terminé'}
-                                    </span>
-                                  )}
-                                </div>
-                              </div>
-                              {apt.motif && (
-                                <div className="text-xs opacity-95 mt-1 line-clamp-1">
-                                  {apt.motif}
-                                </div>
-                              )}
-                              <div className="text-[11px] opacity-80 mt-1">
-                                Dr. {apt.medecin?.prenom} {apt.medecin?.nom}
-                              </div>
-
-                              {/* Barre de durée proportionnelle (max 60min) */}
-                              <div className="mt-2 h-1.5 bg-white/20 rounded">
-                                <div
-                                  className="h-1.5 bg-white/80 rounded"
-                                  style={{ width: `${Math.min(((apt.duree || 30) / 60), 1) * 100}%` }}
-                                />
-                              </div>
-
-                              {/* Tooltip détaillé au survol */}
-                              <div className="pointer-events-none absolute left-full top-1/2 ml-2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity duration-150 z-40">
-                                <div className="min-w-[220px] rounded-xl shadow-2xl bg-white text-gray-800 p-3 border border-gray-200">
-                                  <div className="text-sm font-semibold text-gray-900 mb-1">
-                                    {apt.patient?.prenom} {apt.patient?.nom}
-                                  </div>
-                                  <div className="text-xs text-gray-600 mb-1">
-                                    Médecin: Dr. {apt.medecin?.prenom} {apt.medecin?.nom}
-                                  </div>
-                                  <div className="text-xs text-gray-600 mb-1">
-                                    {new Date(apt.date_heure).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
-                                    {apt.duree ? ` • ${apt.duree} min` : ''}
-                                  </div>
-                                  {apt.motif && (
-                                    <div className="text-xs text-gray-700 line-clamp-2">
-                                      {apt.motif}
-                                    </div>
-                                  )}
-                                </div>
-                              </div>
-                            </motion.div>
-                            );
-                          })}
                         </div>
                       </div>
                     );

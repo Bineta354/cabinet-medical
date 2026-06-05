@@ -151,13 +151,45 @@ const DoctorDashboard = () => {
       switch (action) {
         case 'receive':
           // Nouveau workflow simplifié : Recevoir le patient
+          const patient = waitingQueue.find(p => p.id === patientId || p.waiting_queue_id === patientId);
+          if (!patient) {
+            unifiedNotificationService.error('Patient non trouvé ou déjà en cours de traitement');
+            break;
+          }
+
+          // Réinitialiser les autres patients du médecin à 'waiting' avant de démarrer la consultation
+          // pour garantir qu'un seul patient est en consultation à la fois
+          try {
+            await supabase
+              .from('waiting_queue')
+              .update({ 
+                status: 'waiting',
+                updated_at: new Date().toISOString()
+              })
+              .eq('medecin_id', userProfile.id)
+              .neq('id', patientId)
+              .in('status', ['authorized', 'en_route', 'present', 'arrive']);
+          } catch (error) {
+            console.error('Erreur lors de la réinitialisation des autres patients:', error);
+          }
+
+          console.log('userProfile complet:', JSON.stringify(userProfile));
+          console.log('userProfile.id:', userProfile.id, 'Type:', typeof userProfile.id);
+          
           const { data: receiveData, error: receiveError } = await supabase.rpc('medecin_recoit_patient_simplifie', {
             p_waiting_queue_id: patientId,
             p_medecin_id: userProfile.id
           });
+          
+          console.log('receiveData complet:', JSON.stringify(receiveData));
+          console.log('receiveError complet:', JSON.stringify(receiveError));
+          
           if (receiveError) throw receiveError;
           
           if (receiveData?.success) {
+            // Fixer ce patient comme patient actuel
+            setSelectedCurrentPatientId(patientId);
+            localStorage.setItem(`doctor_${userProfile?.id}_current_patient`, patientId);
             unifiedNotificationService.success(receiveData.message);
           } else {
             unifiedNotificationService.error(receiveData.error || 'Erreur lors de la réception du patient');
@@ -327,9 +359,9 @@ const DoctorDashboard = () => {
         return manuallySelected;
       } else {
         console.log('Patient sélectionné manuellement non trouvé ou statut invalide');
-        // Nettoyer la sélection si le patient n'existe plus
-        setSelectedCurrentPatientId(null);
-        localStorage.removeItem(`doctor_${userProfile?.id}_current_patient`);
+        // NE PAS nettoyer automatiquement - garder la sélection même si le patient n'est plus dans la file
+        // Cela évite les changements automatiques indésirables
+        return null;
       }
     }
     
@@ -340,30 +372,52 @@ const DoctorDashboard = () => {
       return inConsultation;
     }
     
+    // UN SEUL patient disponible à la fois
     const available = waitingQueue.find(p => ['present', 'authorized', 'medecin_pret', 'en_route', 'arrive'].includes(p.status));
     console.log('Patient disponible (auto):', available);
     return available;
   }, [selectedCurrentPatientId, waitingQueue, userProfile?.id]);
   
   // Fonction pour sélectionner manuellement un patient actuel
-  const handleSelectCurrentPatient = (patientId) => {
+  const handleSelectCurrentPatient = async (patientId) => {
     console.log('Sélection manuelle du patient actuel:', patientId);
     console.log('PatientId reçu:', patientId, 'Type:', typeof patientId);
     console.log('File d\'attente actuelle:', waitingQueue);
     
-    // Mettre à jour l'état immédiatement
-    setSelectedCurrentPatientId(patientId);
-    
-    // Sauvegarder dans le localStorage pour persistance
     if (patientId) {
-      localStorage.setItem(`doctor_${userProfile?.id}_current_patient`, patientId);
+      // Vérifier que le patient existe
       const patient = waitingQueue.find(p => 
         String(p.id) === String(patientId) || String(p.waiting_queue_id) === String(patientId)
       );
-      const patientName = patient ? `${patient.patient_prenom} ${patient.patient_nom}` : 'Patient';
+      if (!patient) {
+        unifiedNotificationService.error('Patient non trouvé dans la file d\'attente');
+        return;
+      }
+      
+      // Mettre à jour la base de données : réinitialiser les autres patients du médecin à 'waiting'
+      // pour garantir qu'un seul patient peut être "actuel" à la fois
+      try {
+        await supabase
+          .from('waiting_queue')
+          .update({ 
+            status: 'waiting',
+            updated_at: new Date().toISOString()
+          })
+          .eq('medecin_id', userProfile.id)
+          .neq('id', patientId)
+          .in('status', ['authorized', 'en_route', 'present', 'arrive']);
+      } catch (error) {
+        console.error('Erreur lors de la réinitialisation des autres patients:', error);
+      }
+      
+      // Mettre à jour l'état immédiatement
+      setSelectedCurrentPatientId(patientId);
+      localStorage.setItem(`doctor_${userProfile?.id}_current_patient`, patientId);
+      const patientName = `${patient.patient_prenom} ${patient.patient_nom}`;
       console.log('Patient trouvé pour sélection:', patient);
       unifiedNotificationService.success(`${patientName} défini comme patient actuel`);
     } else {
+      setSelectedCurrentPatientId(null);
       localStorage.removeItem(`doctor_${userProfile?.id}_current_patient`);
       unifiedNotificationService.info('Mode automatique activé');
     }
@@ -590,7 +644,7 @@ const DoctorDashboard = () => {
                               'present': 'Arrivé',
                               'authorized': 'Autorisé', 
                               'medecin_pret': 'Médecin prêt',
-                              'en_route': 'En route',
+                              'en_route': 'Patient appelé',
                               'in_consultation': 'En consultation',
                               'arrive': 'Arrivé'
                             }[patient.status] || 'En attente';
@@ -668,7 +722,7 @@ const DoctorDashboard = () => {
                         {currentPatient.status === 'present' ? '🔔 Arrivé' :
                          currentPatient.status === 'arrive' ? '🔔 Arrivé' :
                          currentPatient.status === 'authorized' ? '✅ Demandé' :
-                         currentPatient.status === 'en_route' ? '🚶 En route' :
+                         currentPatient.status === 'en_route' ? '🚶 Patient appelé' :
                          currentPatient.status === 'in_consultation' ? '🩺 En consultation' :
                          currentPatient.status}
                       </span>
@@ -681,33 +735,14 @@ const DoctorDashboard = () => {
                   </div>
 
                   <div className="flex space-x-2">
-                    {/* Bouton Recevoir ce patient - pour statuts present/arrive */}
-                    {(currentPatient.status === 'present' || currentPatient.status === 'arrive') && (
+                    {/* Bouton Recevoir ce patient - pour statuts present/arrive/authorized/en_route */}
+                    {(currentPatient.status === 'present' || currentPatient.status === 'arrive' || currentPatient.status === 'authorized' || currentPatient.status === 'en_route') && (
                       <button
                         onClick={() => handlePatientAction(currentPatient.id, 'receive')}
                         className="flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
                       >
                         <UserCheck className="w-4 h-4 mr-2" />
                         Recevoir ce patient
-                      </button>
-                    )}
-                    
-                    {/* Statut authorized - En attente autorisation secrétaire */}
-                    {currentPatient.status === 'authorized' && (
-                      <div className="flex items-center px-4 py-2 bg-blue-100 text-blue-800 rounded-lg">
-                        <Clock className="w-4 h-4 mr-2" />
-                        En attente d'autorisation de la secrétaire
-                      </div>
-                    )}
-                    
-                    {/* Bouton Commencer consultation - pour statut en_route */}
-                    {currentPatient.status === 'en_route' && (
-                      <button
-                        onClick={() => handlePatientAction(currentPatient.id, 'start')}
-                        className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-                      >
-                        <Stethoscope className="w-4 h-4 mr-2" />
-                        Commencer consultation
                       </button>
                     )}
                     
@@ -778,14 +813,7 @@ const DoctorDashboard = () => {
                           className="flex items-center px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
                         >
                           <Stethoscope className="w-4 h-4 mr-2" />
-                          Continuer consultation
-                        </button>
-                        <button
-                          onClick={() => handlePatientAction(currentPatient.id, 'finish')}
-                          className="flex items-center px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
-                        >
-                          <UserCheck className="w-4 h-4 mr-2" />
-                          Terminer consultation
+                          Commencer consultation
                         </button>
                       </div>
                     )}
@@ -804,12 +832,12 @@ const DoctorDashboard = () => {
           <div className="lg:col-span-1">
             <div className="bg-white rounded-lg shadow-md border border-gray-200">
               <div className="p-4 border-b border-gray-200">
-                <h3 className="text-lg font-semibold text-gray-900">File d'attente ({waitingQueue.length})</h3>
+                <h3 className="text-lg font-semibold text-gray-900">File d'attente ({waitingQueue.filter(p => p.status === 'waiting').length})</h3>
               </div>
               <div className="p-4 max-h-96 overflow-y-auto">
-                {waitingQueue.length > 0 ? (
+                {waitingQueue.filter(p => p.status === 'waiting').length > 0 ? (
                   <div className="space-y-3">
-                    {waitingQueue.map((patient, index) => (
+                    {waitingQueue.filter(p => p.status === 'waiting').map((patient, index) => (
                       <div key={patient.id} className={`p-3 border rounded-lg ${
                         isCurrentPatient(patient) ? 'border-blue-300 bg-blue-50' : 'border-gray-200'
                       }`}>

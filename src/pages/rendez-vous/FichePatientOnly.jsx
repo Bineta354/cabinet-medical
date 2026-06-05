@@ -88,6 +88,7 @@ const FichePatientOnly = () => {
         .from('users')
         .select('id, nom, prenom, specialite')
         .eq('role', 'doctor')
+        .eq('actif', true)
         .order('nom', { ascending: true });
 
       if (error) throw error;
@@ -212,7 +213,7 @@ const FichePatientOnly = () => {
         .from('consultations')
         .select(`
           *,
-          medecin:users(nom, prenom, specialite)
+          medecin:users!inner(nom, prenom, specialite, actif)
         `)
         .eq('patient_id', patientId)
         .order('date_consultation', { ascending: false })
@@ -227,7 +228,7 @@ const FichePatientOnly = () => {
         .from('appointments')
         .select(`
           *,
-          medecin:users(nom, prenom, specialite)
+          medecin:users!inner(nom, prenom, specialite, actif)
         `)
         .eq('patient_id', patientId)
         .gte('date_heure', today)

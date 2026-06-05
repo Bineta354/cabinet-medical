@@ -128,7 +128,7 @@ const MyWaitingQueuePage = () => {
       if (payload.eventType === 'INSERT') {
         const notification = payload.new;
         
-        // Si c'est une notification que le patient est en route
+        // Si c'est une notification que le patient est appelé
         if (notification.type_notification === 'patient_on_way') {
           // Mettre à jour le status du patient vers 'present'
           const waitingQueueId = notification.waiting_queue_id;
@@ -352,6 +352,7 @@ const MyWaitingQueuePage = () => {
         case 'call':
           newStatus = 'called';
           // Envoyer notification au secrétaire pour appeler le patient
+          // PAS de validation workflow - "Introduire" est une demande, pas une confirmation
           await handleCallPatient(patientId);
           break;
         case 'receive':
@@ -387,7 +388,8 @@ const MyWaitingQueuePage = () => {
           return;
       }
 
-      if (currentPatient) {
+      // Skip workflow validation for 'call' action (Introduire) - it's just a request, not a confirmation
+      if (action !== 'call' && currentPatient) {
         const transition = validateQueueTransition(currentPatient.status, newStatus);
         if (
           transition.needsConfirmation &&
@@ -450,8 +452,9 @@ const MyWaitingQueuePage = () => {
 
       const secretaryId = secretaries[0].id;
       const patientName = `${patient.patient?.prenom} ${patient.patient?.nom}`;
+      const doctorName = `Dr. ${userProfile?.prenom} ${userProfile?.nom}`;
 
-      // Envoyer la notification via le nouveau système
+      // Envoyer la notification via le nouveau système avec le message personnalisé
       await sendNotification(
         NOTIFICATION_TYPES.PATIENT_READY,
         userProfile.id,           // Médecin (expéditeur)
@@ -460,7 +463,8 @@ const MyWaitingQueuePage = () => {
         patientName,
         {
           waitingQueueId: waitingQueueId,
-          patientId: patient.patient_id
+          patientId: patient.patient_id,
+          medecinName: doctorName
         }
       );
 
@@ -471,9 +475,9 @@ const MyWaitingQueuePage = () => {
         patientName
       });
 
-      console.log('✅ [MyWaitingQueue] Notification d\'appel envoyée au secrétaire');
+      console.log('✅ [MyWaitingQueue] Notification d\'introduction envoyée au secrétaire');
     } catch (error) {
-      console.error('❌ [MyWaitingQueue] Erreur notification appel:', error);
+      console.error('❌ [MyWaitingQueue] Erreur notification introduction:', error);
     }
   };
 
@@ -614,7 +618,7 @@ const MyWaitingQueuePage = () => {
     );
   }
 
-  const patientsEnAttente = waitingQueue.filter(p => p.status === 'waiting' || p.status === 'called');
+  const patientsEnAttente = waitingQueue.filter(p => p.status === 'waiting');
   const patientsPresents = waitingQueue.filter(p => p.status === 'present');
   const patientsEnConsultation = waitingQueue.filter(p => p.status === 'in_consultation');
   const patientsAppeles = waitingQueue.filter(p => p.status === 'called');
@@ -832,12 +836,10 @@ const MyWaitingQueuePage = () => {
         </div>
       )}
 
-      {/* File d'attente - En Attente, Présents et En Consultation */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Patients en attente */}
-        <div className="card">
+      {/* File d'attente - En Attente (pleine largeur) */}
+      <div className="card">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl font-semibold text-gray-900 flex items-center gap-2">
+            <h2 className="text-section-title flex items-center gap-2">
               <Clock className="w-5 h-5 text-yellow-600" />
               En Attente ({patientsEnAttente.length})
             </h2>
@@ -874,10 +876,10 @@ const MyWaitingQueuePage = () => {
                         <p className="font-medium text-gray-900">
                           {patient.patient?.prenom} {patient.patient?.nom}
                         </p>
-                        <p className="text-xs text-gray-500">
+                        <p className="text-small">
                           Dr. {userProfile?.prenom} {userProfile?.nom} {userProfile?.specialite ? `- ${userProfile.specialite}` : ''}
                         </p>
-                        <p className="text-sm text-gray-500">Dossier: {patient.patient?.numero_dossier}</p>
+                        <p className="text-body">Dossier: {patient.patient?.numero_dossier}</p>
                         {isCalled && (
                           <p className="text-xs text-orange-600 font-medium">📞 Appelé</p>
                         )}
@@ -909,51 +911,28 @@ const MyWaitingQueuePage = () => {
                   </div>
                   
                   <div className="flex gap-2">
-                    {/* Bouton Choisir ce patient */}
-                    <button
-                      onClick={() => {
-                        setSelectedPatient(patient);
-                        // Scroll vers le haut pour voir la section "Patient Actuel"
-                        window.scrollTo({ top: 0, behavior: 'smooth' });
-                      }}
-                      className="btn btn-primary btn-sm"
-                      title="Sélectionner ce patient"
-                    >
-                      <UserCheck className="w-4 h-4" />
-                      Choisir
-                    </button>
                     {!isCalled && (
-                      <button
-                        onClick={() => handlePatientAction(patient.id, 'call')}
-                        disabled={consultationEnCours || (callCountdown && callCountdown.waitingQueueId === patient.id)}
-                        className={`btn btn-warning btn-sm flex items-center gap-2 ${
-                          consultationEnCours || (callCountdown && callCountdown.waitingQueueId === patient.id) 
-                            ? 'opacity-50 cursor-not-allowed' : ''
-                        }`}
-                        title={
-                          consultationEnCours ? "Consultation en cours" : 
-                          (callCountdown && callCountdown.waitingQueueId === patient.id) 
-                            ? `Attendre ${callCountdown.seconds}s` : 
-                          "Appeler le patient"
-                        }
-                      >
-                        <PhoneCall className="w-4 h-4" />
-                        {callCountdown && callCountdown.waitingQueueId === patient.id 
-                          ? `${callCountdown.seconds}s` 
-                          : 'Appeler'
-                        }
-                      </button>
+                      <>
+                        {callCountdown && callCountdown.waitingQueueId === patient.id ? (
+                          <div className="flex items-center gap-2 px-3 py-1.5 bg-gray-200 text-gray-600 text-xs font-medium rounded cursor-not-allowed">
+                            <Clock className="w-3 h-3" />
+                            Demande envoyée ⏳
+                          </div>
+                        ) : (
+                          <button
+                            onClick={() => handlePatientAction(patient.id, 'call')}
+                            disabled={consultationEnCours}
+                            className={`btn btn-primary btn-sm flex items-center gap-2 ${
+                              consultationEnCours ? 'opacity-50 cursor-not-allowed' : ''
+                            }`}
+                            title={consultationEnCours ? "Consultation en cours" : "Introduire le patient"}
+                          >
+                            <ArrowRight className="w-4 h-4" />
+                            Introduire
+                          </button>
+                        )}
+                      </>
                     )}
-                    <button
-                      onClick={() => handlePatientAction(patient.id, 'absent')}
-                      disabled={consultationEnCours}
-                      className={`p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors ${
-                        consultationEnCours ? 'opacity-50 cursor-not-allowed' : ''
-                      }`}
-                      title={consultationEnCours ? "Consultation en cours" : "Patient absent"}
-                    >
-                      <UserX className="w-4 h-4" />
-                    </button>
                   </div>
                 </div>
                 </div>
@@ -968,165 +947,6 @@ const MyWaitingQueuePage = () => {
             )}
           </div>
         </div>
-
-        {/* Patients présents */}
-        <div className="card">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl font-semibold text-gray-900 flex items-center gap-2">
-              <UserCheck className="w-5 h-5 text-blue-600" />
-              Présents ({patientsPresents.length})
-            </h2>
-          </div>
-          
-          <div className="space-y-3 overflow-y-auto max-h-96">
-            {filteredPatientsPresents.map((patient) => (
-              <div key={patient.id} className="border border-blue-200 bg-blue-50 rounded-lg p-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full flex items-center justify-center text-white font-semibold text-sm">
-                      {patient.patient?.prenom?.[0]}{patient.patient?.nom?.[0]}
-                    </div>
-                    <div>
-                      <p className="font-medium text-gray-900">
-                        {patient.patient?.prenom} {patient.patient?.nom}
-                      </p>
-                      <p className="text-xs text-gray-600">Dr. {userProfile?.prenom} {userProfile?.nom} {userProfile?.specialite ? `- ${userProfile.specialite}` : ''}</p>
-                      <p className="text-sm text-gray-500">Dossier: {patient.patient?.numero_dossier}</p>
-                    </div>
-                  </div>
-                  
-                  <div className="text-right">
-                    <span className="px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                      Présent
-                    </span>
-                    <p className="text-xs text-gray-400 mt-1">
-                      Arrivé à {new Date(patient.arrived_at).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
-                    </p>
-                  </div>
-                </div>
-                
-                <div className="flex items-center justify-between mt-3 pt-3 border-t border-blue-200">
-                  <div className="flex items-center gap-4 text-sm text-gray-600">
-                    <div className="flex items-center gap-1">
-                      <Phone className="w-4 h-4" />
-                      {patient.patient?.telephone}
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <Clock className="w-4 h-4" />
-                      En attente de consultation
-                    </div>
-                  </div>
-                  
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => {
-                        setSelectedPatient(patient);
-                        window.scrollTo({ top: 0, behavior: 'smooth' });
-                      }}
-                      className="btn btn-primary btn-sm flex items-center gap-2"
-                    >
-                      <UserCheck className="w-4 h-4" />
-                      Choisir
-                    </button>
-                    <button
-                      onClick={() => handlePatientAction(patient.id, 'consultation')}
-                      disabled={consultationEnCours || patient.status === 'en_route'}
-                      className={`btn btn-success btn-sm flex items-center gap-2 ${
-                        consultationEnCours || patient.status === 'en_route' 
-                          ? 'opacity-50 cursor-not-allowed' : ''
-                      }`}
-                      title={
-                        consultationEnCours ? "Consultation en cours" : 
-                        patient.status === 'en_route' ? "Patient déjà en route vers vous" :
-                        "Commencer la consultation"
-                      }
-                    >
-                      <Stethoscope className="w-4 h-4" />
-                      {patient.status === 'en_route' ? 'En route' : 'Commencer'}
-                    </button>
-                  </div>
-                </div>
-              </div>
-            ))}
-            
-            {filteredPatientsPresents.length === 0 && (
-              <div className="text-center py-8">
-                <UserCheck className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                <p className="text-gray-500">Aucun patient présent</p>
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Patients en consultation */}
-        <div className="card">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl font-semibold text-gray-900 flex items-center gap-2">
-              <Stethoscope className="w-5 h-5 text-green-600" />
-              En Consultation ({patientsEnConsultation.length})
-            </h2>
-          </div>
-          
-          <div className="space-y-3 overflow-y-auto max-h-96">
-            {patientsEnConsultation.map((patient) => (
-              <div key={patient.id} className="border border-green-200 bg-green-50 rounded-lg p-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 bg-gradient-to-br from-green-500 to-green-600 rounded-full flex items-center justify-center text-white font-semibold text-sm">
-                      {patient.patient?.prenom?.[0]}{patient.patient?.nom?.[0]}
-                    </div>
-                    <div>
-                      <p className="font-medium text-gray-900">
-                        {patient.patient?.prenom} {patient.patient?.nom}
-                      </p>
-                      <p className="text-sm text-gray-500">Dossier: {patient.patient?.numero_dossier}</p>
-                    </div>
-                  </div>
-                  
-                  <div className="text-right">
-                    <span className="px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                      En consultation
-                    </span>
-                    <p className="text-xs text-gray-400 mt-1">
-                      Début: {new Date(patient.updated_at).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
-                    </p>
-                  </div>
-                </div>
-                
-                <div className="flex items-center justify-between mt-3 pt-3 border-t border-green-200">
-                  <div className="flex items-center gap-4 text-sm text-gray-600">
-                    <div className="flex items-center gap-1">
-                      <Phone className="w-4 h-4" />
-                      {patient.patient?.telephone}
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <Clock className="w-4 h-4" />
-                      Consultation en cours
-                    </div>
-                  </div>
-                  
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => handlePatientAction(patient.id, 'finish')}
-                      className="btn btn-success btn-sm flex items-center gap-2"
-                    >
-                      <CheckCircle className="w-4 h-4" />
-                      Terminer
-                    </button>
-                  </div>
-                </div>
-              </div>
-            ))}
-            
-            {patientsEnConsultation.length === 0 && (
-              <div className="text-center py-8">
-                <Stethoscope className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                <p className="text-gray-500">Aucun patient en consultation</p>
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
 
       {/* Section Rendez-vous */}
       <div className="bg-white rounded-lg shadow-sm border border-gray-200">

@@ -31,12 +31,13 @@ class TransfertDossierService {
           .from('consultations')
           .select(`
             *,
-            medecin:users(nom, prenom, specialite)
+            medecin:users!inner(nom, prenom, specialite, actif)
           `)
           .eq('patient_id', patientId)
           .in('id', consultationIds.length > 0 ? consultationIds : [0])
           .order('date_consultation', { ascending: false });
-        donnees.consultations = consultations || [];
+        // Filtrer pour ne transférer que les consultations avec des médecins actifs
+        donnees.consultations = (consultations || []).filter(c => c.medecin?.actif !== false);
       }
 
       // Documents patients

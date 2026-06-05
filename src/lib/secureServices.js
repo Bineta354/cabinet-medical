@@ -49,6 +49,7 @@ export const secureUserService = {
       .from('users')
       .select('*')
       .eq('role', 'doctor')
+      .eq('actif', true)
       .order('nom', { ascending: true });
     
     if (error) throw error;

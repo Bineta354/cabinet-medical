@@ -27,6 +27,7 @@ const TestDoctorSpecificQueue = () => {
         .from('users')
         .select('id, nom, prenom, specialite')
         .eq('role', 'doctor')
+        .eq('actif', true)
         .order('nom', { ascending: true });
 
       if (doctorsError) {

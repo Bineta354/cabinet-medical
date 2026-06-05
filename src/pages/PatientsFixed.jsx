@@ -140,7 +140,7 @@ const PatientsPage = () => {
   };
 
   const handleDeletePatient = async (patient) => {
-    if (!isSecretary && window.confirm(`Êtes-vous sûr de vouloir supprimer le patient ${patient.prenom} ${patient.nom} ?`)) {
+    if (!isSecretary && window.confirm(`Êtes-vous sûr de vouloir archiver le patient ${patient.prenom} ${patient.nom} ?`)) {
       try {
         const { error } = await supabase
           .from('patients')
@@ -545,7 +545,7 @@ const PatientsPage = () => {
                       <button 
                         onClick={() => handleEditPatient(patient)}
                         className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors"
-                        title="Modifier"
+                        title="Mettre à jour"
                       >
                         <Edit className="w-4 h-4" />
                       </button>
@@ -553,7 +553,7 @@ const PatientsPage = () => {
                         <button 
                           onClick={() => handleDeletePatient(patient)}
                           className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                          title="Supprimer"
+                          title="Archiver"
                         >
                           <Trash2 className="w-4 h-4" />
                         </button>

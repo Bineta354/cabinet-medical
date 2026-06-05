@@ -37,7 +37,7 @@ const DetailsRendezVous = () => {
         .select(`
           *,
           patient:patients(id, nom, prenom, telephone, sexe, date_naissance),
-          medecin:users(id, nom, prenom)
+          medecin:users!inner(id, nom, prenom, actif)
         `)
         .order('date_heure', { ascending: true });
 

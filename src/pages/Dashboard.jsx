@@ -118,7 +118,7 @@ const Dashboard = () => {
       <div className="flex items-center justify-center h-64">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-medical-primary mx-auto"></div>
-          <p className="mt-4 text-gray-600">Chargement du tableau de bord...</p>
+          <p className="mt-4 text-gray-600">Chargement de l'accueil...</p>
         </div>
       </div>
     );
@@ -148,7 +148,7 @@ const Dashboard = () => {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">
-            Tableau de Bord
+            Accueil
           </h1>
           <p className="text-gray-600 mt-1">
             Bienvenue, {currentUser?.nom} {currentUser?.prenom}

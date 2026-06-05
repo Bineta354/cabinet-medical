@@ -272,7 +272,7 @@ const DoctorDashboard = () => {
         }
         
         case 'consultation': {
-          // Démarrer la consultation si le patient est en route
+          // Démarrer la consultation si le patient est appelé
           try {
             const target = waitingQueue.find(p => p.id === patientId || p.waiting_queue_id === patientId);
             if (target && target.status === 'en_route') {

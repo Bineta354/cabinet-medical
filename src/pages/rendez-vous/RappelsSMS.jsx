@@ -42,13 +42,15 @@ const RappelsSMS = () => {
             date_heure,
             motif,
             patients:patient_id (nom, prenom, telephone),
-            medecins:medecin_id (nom, prenom)
+            medecins:medecin_id (nom, prenom, actif)
           )
         `)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setRappels(data || []);
+      // Filtrer pour ne montrer que les rappels avec des médecins actifs
+      const filteredData = (data || []).filter(rappel => rappel.appointments?.medecins?.actif !== false);
+      setRappels(filteredData);
     } catch (error) {
       console.error('Erreur lors du chargement des rappels:', error);
     }
@@ -65,14 +67,16 @@ const RappelsSMS = () => {
         .select(`
           *,
           patients:patient_id (nom, prenom, telephone),
-          medecins:medecin_id (nom, prenom)
+          medecins:medecin_id (nom, prenom, actif)
         `)
         .gte('date_heure', today.toISOString())
         .lte('date_heure', nextWeek.toISOString())
         .order('date_heure', { ascending: true });
 
       if (error) throw error;
-      setAppointments(data || []);
+      // Filtrer pour ne montrer que les rendez-vous avec des médecins actifs
+      const filteredData = (data || []).filter(apt => apt.medecins?.actif !== false);
+      setAppointments(filteredData);
     } catch (error) {
       console.error('Erreur lors du chargement des rendez-vous:', error);
     }
@@ -92,7 +96,7 @@ const RappelsSMS = () => {
             date_heure,
             motif,
             patients:patient_id (nom, prenom, telephone),
-            medecins:medecin_id (nom, prenom)
+            medecins:medecin_id (nom, prenom, actif)
           )
         `)
         .gte('created_at', startDate.toISOString())
@@ -100,7 +104,9 @@ const RappelsSMS = () => {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setRappels(data || []);
+      // Filtrer pour ne montrer que les rappels avec des médecins actifs
+      const filteredData = (data || []).filter(rappel => rappel.appointments?.medecins?.actif !== false);
+      setRappels(filteredData);
     } catch (error) {
       console.error('Erreur lors du chargement des rappels pour la date:', error);
     }
@@ -118,7 +124,7 @@ const RappelsSMS = () => {
         .select(`
           *,
           patients:patient_id (nom, prenom, telephone),
-          medecins:medecin_id (nom, prenom)
+          medecins:medecin_id (nom, prenom, actif)
         `)
         .gte('date_heure', tomorrow.toISOString())
         .lt('date_heure', new Date(tomorrow.getTime() + 24 * 60 * 60 * 1000).toISOString())
@@ -132,7 +138,7 @@ const RappelsSMS = () => {
         .select(`
           *,
           patients:patient_id (nom, prenom, telephone),
-          medecins:medecin_id (nom, prenom)
+          medecins:medecin_id (nom, prenom, actif)
         `)
         .gte('date_heure', today.toISOString())
         .lt('date_heure', new Date(today.getTime() + 24 * 60 * 60 * 1000).toISOString())
@@ -140,10 +146,14 @@ const RappelsSMS = () => {
 
       if (errorToday) throw errorToday;
 
+      // Filtrer pour ne générer des rappels que pour les médecins actifs
+      const filteredAppointmentsTomorrow = (appointmentsTomorrow || []).filter(apt => apt.medecins?.actif !== false);
+      const filteredAppointmentsToday = (appointmentsToday || []).filter(apt => apt.medecins?.actif !== false);
+
       const rappelsToCreate = [];
 
       // Créer les rappels veille
-      appointmentsTomorrow.forEach(appointment => {
+      filteredAppointmentsTomorrow.forEach(appointment => {
         if (appointment.patients?.telephone) {
           rappelsToCreate.push({
             appointment_id: appointment.id,
@@ -158,7 +168,7 @@ const RappelsSMS = () => {
       });
 
       // Créer les rappels jour J
-      appointmentsToday.forEach(appointment => {
+      filteredAppointmentsToday.forEach(appointment => {
         if (appointment.patients?.telephone) {
           rappelsToCreate.push({
             appointment_id: appointment.id,
@@ -470,7 +480,7 @@ const RappelsSMS = () => {
                         onClick={() => deleteRappel(rappel.id)}
                         className="text-red-600 hover:text-red-900"
                       >
-                        Supprimer
+                        Retirer
                       </button>
                     </div>
                   </td>

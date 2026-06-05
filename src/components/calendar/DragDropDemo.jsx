@@ -22,8 +22,8 @@ const DragDropDemo = ({ onClose }) => {
                         </div>
                     </div>
                     <div className="space-y-2">
-                        <h3 className="text-lg font-semibold text-gray-700">Glissez pour créer un rendez-vous</h3>
-                        <p className="text-sm text-gray-500 max-w-md">Cliquez et glissez sur les créneaux horaires pour sélectionner une durée et créer un nouveau rendez-vous.</p>
+                        <h3 className="text-lg font-semibold text-gray-700">Glissez pour planifier un rendez-vous</h3>
+                        <p className="text-sm text-gray-500 max-w-md">Cliquez et glissez sur les créneaux horaires pour sélectionner une durée et planifier un nouveau rendez-vous.</p>
                     </div>
                 </div>
             </div>

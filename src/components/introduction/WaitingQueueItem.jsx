@@ -1,7 +1,7 @@
 import React from 'react';
 import { Clock, CheckCircle, UserCheck, Activity, Phone, CheckSquare } from 'lucide-react';
 
-const WaitingQueueItem = ({ item, index, onAuthorize, isLoading }) => {
+const WaitingQueueItem = ({ item, index, onAuthorize, onMarkInConsultation, isLoading }) => {
   const getStatusConfig = (status) => {
     switch (status) {
       case 'waiting':
@@ -13,7 +13,7 @@ const WaitingQueueItem = ({ item, index, onAuthorize, isLoading }) => {
       case 'medecin_pret':
         return { color: 'bg-cyan-100 text-cyan-800', label: 'Médecin prêt' };
       case 'en_route':
-        return { color: 'bg-purple-100 text-purple-800', label: 'En route' };
+        return { color: 'bg-purple-100 text-purple-800', label: 'Patient appelé' };
       case 'in_consultation':
         return { color: 'bg-purple-100 text-purple-800', label: 'En consultation' };
       default:
@@ -28,7 +28,7 @@ const WaitingQueueItem = ({ item, index, onAuthorize, isLoading }) => {
       case 'medecin_pret':
         return { color: 'bg-green-100 text-green-800', icon: CheckCircle, label: 'Médecin prêt' };
       case 'en_route':
-        return { color: 'bg-blue-100 text-blue-800', icon: UserCheck, label: 'Patient en route' };
+        return { color: 'bg-blue-100 text-blue-800', icon: UserCheck, label: 'Patient appelé' };
       case 'in_consultation':
         return { color: 'bg-purple-100 text-purple-800', icon: Activity, label: 'En consultation' };
       case 'appele':
@@ -43,8 +43,9 @@ const WaitingQueueItem = ({ item, index, onAuthorize, isLoading }) => {
   const statusConfig = getStatusConfig(item.status);
   const statusIndicator = getStatusIndicator(item.status);
   const StatusIcon = statusIndicator.icon;
-  const isDisabled = ['en_route', 'in_consultation'].includes(item.status);
+  const isDisabled = ['in_consultation'].includes(item.status);
   const isReady = ['medecin_pret', 'authorized'].includes(item.status);
+  const isEnRoute = item.status === 'en_route';
 
   return (
     <div className="p-3 border border-gray-200 rounded-lg hover:bg-gray-50">
@@ -80,33 +81,71 @@ const WaitingQueueItem = ({ item, index, onAuthorize, isLoading }) => {
           {statusIndicator.label}
         </div>
         
-        <button
-          onClick={() => onAuthorize(item.id)}
-          disabled={isLoading.actions || isDisabled}
-          className={`px-3 py-1.5 rounded text-white text-xs transition-colors flex items-center gap-1.5 ${
-            isReady
-              ? 'bg-green-600 hover:bg-green-700' 
-              : isDisabled
-              ? 'bg-gray-400 cursor-not-allowed'
-              : 'bg-orange-500 hover:bg-orange-600'
-          } ${isLoading.actions ? 'opacity-50 cursor-not-allowed' : ''}`}
-          title={
-            item.status === 'medecin_pret' 
-              ? "Introduire patient" 
-              : item.status === 'authorized'
-              ? "Médecin va recevoir - Autoriser maintenant"
-              : item.status === 'en_route'
-              ? "Patient déjà en route"
-              : item.status === 'in_consultation'
-              ? "Patient déjà en consultation"
-              : "Le médecin doit d'abord se rendre disponible"
-          }
-        >
-          <CheckSquare className="w-3 h-3" />
-          {item.status === 'en_route' ? 'En route' : 
-           item.status === 'in_consultation' ? 'En consultation' :
-           'Introduire'}
-        </button>
+        {/* Affichage conditionnel des boutons selon le statut */}
+        {/* Bouton d'introduction manuelle pour la secrétaire (statut: waiting) */}
+        {item.status === 'waiting' && (
+          <button
+            onClick={() => onAuthorize(item.id)}
+            disabled={isLoading.actions}
+            className="px-3 py-1.5 rounded text-white text-xs transition-colors flex items-center gap-1.5 bg-orange-500 hover:bg-orange-600"
+            title="Introduire le patient manuellement"
+          >
+            <CheckSquare className="w-3 h-3" />
+            Introduire
+          </button>
+        )}
+        
+        {/* Bouton pour confirmer que le patient a été appelé (statut: en_attente) */}
+        {item.status === 'en_attente' && (
+          <button
+            onClick={() => onAuthorize(item.id)}
+            disabled={isLoading.actions}
+            className="px-3 py-1.5 rounded text-white text-xs transition-colors flex items-center gap-1.5 bg-orange-500 hover:bg-orange-600"
+            title="Confirmer que le patient a été appelé"
+          >
+            <CheckSquare className="w-3 h-3" />
+            Patient appelé
+          </button>
+        )}
+        
+        {/* Bouton pour marquer le patient comme entré en consultation (statut: called) */}
+        {item.status === 'called' && onMarkInConsultation && (
+          <button
+            onClick={() => onMarkInConsultation(item.id)}
+            disabled={isLoading.actions}
+            className="px-3 py-1.5 rounded text-white text-xs transition-colors flex items-center gap-1.5 bg-purple-600 hover:bg-purple-700"
+            title="Confirmer que le patient est physiquement dans le bureau"
+          >
+            <Activity className="w-3 h-3" />
+            Entré en consultation
+          </button>
+        )}
+        
+        {/* Bouton pour appeler le patient quand le médecin est prêt (statut: medecin_pret) */}
+        {item.status === 'medecin_pret' && (
+          <button
+            onClick={() => onAuthorize(item.id)}
+            disabled={isLoading.actions}
+            className="px-3 py-1.5 rounded text-white text-xs transition-colors flex items-center gap-1.5 bg-green-600 hover:bg-green-700"
+            title="Appeler patient"
+          >
+            <CheckSquare className="w-3 h-3" />
+            Appeler
+          </button>
+        )}
+        
+        {/* Bouton pour autoriser le patient (statut: authorized) */}
+        {item.status === 'authorized' && (
+          <button
+            onClick={() => onAuthorize(item.id)}
+            disabled={isLoading.actions}
+            className="px-3 py-1.5 rounded text-white text-xs transition-colors flex items-center gap-1.5 bg-green-600 hover:bg-green-700"
+            title="Médecin va recevoir - Autoriser maintenant"
+          >
+            <CheckSquare className="w-3 h-3" />
+            Autoriser
+          </button>
+        )}
       </div>
     </div>
   );

@@ -188,7 +188,7 @@ const MockConsultationTestRendu = () => {
                 onClick={() => navigate('/dashboard')}
                 className="mr-4 p-2 rounded-md text-gray-600 hover:text-gray-900 hover:bg-gray-100"
               >
-                <ArrowLeft className="w-5 h-5" />
+                <ArrowLeft className="w-5 h-5" /> Retour à l'accueil
               </button>
               <div>
                 <h1 className="text-xl font-semibold text-gray-900">

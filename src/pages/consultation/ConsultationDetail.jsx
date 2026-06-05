@@ -124,13 +124,19 @@ const ConsultationDetail = () => {
       if (consultation?.medecin_id) {
         const { data, error } = await supabase
           .from('users')
-          .select('id, nom, prenom, specialite')
+          .select('id, nom, prenom, specialite, actif')
           .eq('id', consultation.medecin_id)
           .single();
         if (error) {
           console.error("Erreur lors de la récupération des informations du médecin:", error);
         } else {
-          setMedecinInfo(data);
+          // Ne définir les infos du médecin que s'il est actif
+          if (data?.actif !== false) {
+            setMedecinInfo(data);
+          } else {
+            console.warn("Médecin inactif, informations non chargées");
+            setMedecinInfo(null);
+          }
         }
       }
     };
@@ -822,7 +828,7 @@ const ConsultationDetail = () => {
         />
       )}
       
-      {/* Modal Créer Rendez-vous */}
+      {/* Modal Planifier Rendez-vous */}
       {showCreateRdvModal && (
         <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
           <div className="relative top-10 mx-auto p-5 border w-full max-w-md shadow-lg rounded-md bg-white">

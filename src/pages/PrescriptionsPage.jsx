@@ -65,6 +65,19 @@ const PrescriptionsPage = () => {
     try {
       setIsLoading(true);
       
+      // Vérifier d'abord que le médecin est actif
+      const { data: doctorData, error: doctorError } = await supabase
+        .from('users')
+        .select('id, actif')
+        .eq('id', userProfile.id)
+        .single();
+
+      if (doctorError || !doctorData || doctorData.actif === false) {
+        console.warn('Médecin inactif ou introuvable, aucun patient chargé');
+        setAllPatients([]);
+        return;
+      }
+
       // Récupérer les consultations du médecin avec les infos patients
       const { data: consultationsData, error: consultError } = await supabase
         .from('consultations')

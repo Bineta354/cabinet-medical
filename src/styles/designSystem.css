@@ -46,26 +46,26 @@
   border: 1px solid rgba(51, 65, 85, 0.3);
 }
 
-/* ===== CARDS ===== */
+/* ===== CARDS - RESPONSIVE PADDING ===== */
 .card {
-  @apply bg-white/80 backdrop-blur-sm rounded-3xl shadow-apple border border-white/50 p-6 transition-all duration-300 hover:shadow-apple-lg hover:scale-[1.02] hover:bg-white/90;
+  @apply bg-white/80 backdrop-blur-sm rounded-2xl md:rounded-3xl shadow-apple border border-white/50 p-3 xs:p-4 sm:p-4 md:p-5 lg:p-6 transition-all duration-300 hover:shadow-apple-lg hover:scale-[1.01] hover:bg-white/90;
 }
 
 .card-dark {
-  @apply bg-gray-900/50 backdrop-blur-sm rounded-3xl border border-gray-800 p-6 transition-all duration-300 hover:shadow-2xl hover:scale-[1.02];
+  @apply bg-gray-900/50 backdrop-blur-sm rounded-2xl md:rounded-3xl border border-gray-800 p-3 xs:p-4 sm:p-4 md:p-5 lg:p-6 transition-all duration-300 hover:shadow-2xl hover:scale-[1.01];
 }
 
 .card-stats {
-  @apply relative overflow-hidden bg-white backdrop-blur-sm rounded-3xl border border-gray-100 p-6 hover:shadow-2xl transition-all duration-500 transform hover:scale-105;
+  @apply relative overflow-hidden bg-white backdrop-blur-sm rounded-2xl md:rounded-3xl border border-gray-100 p-3 xs:p-4 sm:p-4 md:p-5 lg:p-6 hover:shadow-2xl transition-all duration-500 transform hover:scale-[1.01];
 }
 
 .card-stats-dark {
-  @apply relative overflow-hidden bg-gray-900/50 backdrop-blur-sm rounded-3xl border border-gray-800 p-6 hover:shadow-2xl transition-all duration-500 transform hover:scale-105;
+  @apply relative overflow-hidden bg-gray-900/50 backdrop-blur-sm rounded-2xl md:rounded-3xl border border-gray-800 p-3 xs:p-4 sm:p-4 md:p-5 lg:p-6 hover:shadow-2xl transition-all duration-500 transform hover:scale-[1.01];
 }
 
-/* ===== BUTTONS ===== */
+/* ===== BUTTONS - RESPONSIVE PADDING ===== */
 .btn {
-  @apply px-6 py-3 rounded-2xl font-semibold transition-all duration-300 focus:outline-none focus:ring-4 focus:ring-offset-2 transform hover:scale-105 active:scale-95 shadow-apple;
+  @apply px-3 py-2 xs:px-4 xs:py-2.5 sm:px-5 sm:py-2.5 md:px-6 md:py-3 rounded-lg xs:rounded-xl sm:rounded-xl md:rounded-2xl font-semibold text-sm xs:text-sm sm:text-base transition-all duration-300 focus:outline-none focus:ring-2 md:focus:ring-4 focus:ring-offset-2 transform hover:scale-105 active:scale-95 shadow-apple;
 }
 
 .btn-primary {
@@ -89,54 +89,124 @@
 }
 
 .btn-icon {
-  @apply p-3 rounded-2xl transition-all hover:shadow-md transform hover:scale-105;
+  @apply p-2 xs:p-2.5 sm:p-3 rounded-lg xs:rounded-xl md:rounded-2xl transition-all hover:shadow-md transform hover:scale-105;
 }
 
-/* ===== INPUTS ===== */
+/* ===== INPUTS - RESPONSIVE PADDING ===== */
 .input {
-  @apply w-full px-4 py-3 bg-gray-50 text-gray-900 rounded-2xl border border-gray-200 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all;
+  @apply w-full px-3 py-2 xs:px-3 xs:py-2.5 sm:px-4 sm:py-2.5 md:px-4 md:py-3 bg-gray-50 text-xs xs:text-sm sm:text-base text-gray-900 rounded-lg xs:rounded-xl md:rounded-2xl border border-gray-200 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all;
 }
 
 .input-dark {
-  @apply w-full px-4 py-3 bg-gray-800 text-white rounded-2xl border border-gray-700 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all;
+  @apply w-full px-3 py-2 xs:px-3 xs:py-2.5 sm:px-4 sm:py-2.5 md:px-4 md:py-3 bg-gray-800 text-xs xs:text-sm sm:text-base text-white rounded-lg xs:rounded-xl md:rounded-2xl border border-gray-700 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all;
 }
 
-/* ===== TYPOGRAPHY ===== */
-.text-heading {
+/* ===== TYPOGRAPHY - STANDARDIZED SYSTEM ===== */
+/* Base font size for the entire application */
+:root {
+  --font-size-base: 16px;
+  --font-size-xs: 0.75rem;    /* 12px */
+  --font-size-sm: 0.875rem;   /* 14px */
+  --font-size-base: 1rem;     /* 16px */
+  --font-size-lg: 1.125rem;   /* 18px */
+  --font-size-xl: 1.25rem;    /* 20px */
+  --font-size-2xl: 1.5rem;    /* 24px */
+  --font-size-3xl: 1.875rem;  /* 30px */
+  --font-size-4xl: 2.25rem;   /* 36px */
+}
+
+/* Page Titles - Level 1 (H1) */
+.text-page-title {
+  @apply text-3xl font-bold text-gray-900;
+}
+
+.text-page-title-dark {
+  @apply text-3xl font-bold text-white;
+}
+
+/* Section Titles - Level 2 (H2) */
+.text-section-title {
+  @apply text-xl font-semibold text-gray-900;
+}
+
+.text-section-title-dark {
+  @apply text-xl font-semibold text-white;
+}
+
+/* Card Titles - Level 3 (H3) */
+.text-card-title {
+  @apply text-lg font-semibold text-gray-900;
+}
+
+.text-card-title-dark {
+  @apply text-lg font-semibold text-white;
+}
+
+/* Labels - Consistent across all forms and cards */
+.text-label {
+  @apply text-sm font-medium text-gray-700;
+}
+
+.text-label-dark {
+  @apply text-sm font-medium text-gray-300;
+}
+
+/* Statistics Numbers - Consistent across all stat cards */
+.text-stat-number {
   @apply text-2xl font-bold text-gray-900;
 }
 
-.text-heading-dark {
+.text-stat-number-dark {
   @apply text-2xl font-bold text-white;
 }
 
-.text-subheading {
-  @apply text-lg font-semibold text-gray-700;
+/* Statistics Labels - Consistent across all stat cards */
+.text-stat-label {
+  @apply text-sm font-medium text-gray-600;
 }
 
-.text-subheading-dark {
-  @apply text-lg font-semibold text-gray-300;
+.text-stat-label-dark {
+  @apply text-sm font-medium text-gray-400;
 }
 
+/* Body Text - Consistent across all content */
 .text-body {
-  @apply text-sm text-gray-600;
+  @apply text-base text-gray-600;
 }
 
 .text-body-dark {
-  @apply text-sm text-gray-400;
+  @apply text-base text-gray-400;
 }
 
-/* ===== LAYOUT ===== */
+/* Small Text - For secondary information */
+.text-small {
+  @apply text-sm text-gray-500;
+}
+
+.text-small-dark {
+  @apply text-sm text-gray-500;
+}
+
+/* Extra Small Text - For metadata and timestamps */
+.text-extra-small {
+  @apply text-xs text-gray-500;
+}
+
+.text-extra-small-dark {
+  @apply text-xs text-gray-500;
+}
+
+/* ===== LAYOUT - RESPONSIVE ===== */
 .container-fluid {
-  @apply px-6 py-6;
+  @apply px-2 py-2 xs:px-3 xs:py-3 sm:px-4 sm:py-4 md:px-5 md:py-5 lg:px-6 lg:py-6;
 }
 
 .grid-stats {
-  @apply grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6;
+  @apply grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 xs:gap-3 sm:gap-4 md:gap-5 lg:gap-6;
 }
 
 .grid-content {
-  @apply grid grid-cols-1 lg:grid-cols-3 gap-6;
+  @apply grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 xs:gap-3 sm:gap-4 md:gap-5 lg:gap-6;
 }
 
 /* ===== ANIMATIONS ===== */

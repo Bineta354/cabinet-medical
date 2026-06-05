@@ -437,10 +437,10 @@ const ConsultationCompletion = () => {
     }
   };
 
-  // Créer un rendez-vous à partir de la date de suivi d'une ordonnance
+  // Planifier un rendez-vous à partir de la date de suivi d'une ordonnance
   const handleCreateAppointmentFromOrdonnance = async (ordonnance) => {
     if (!ordonnance.prochain_rdv || !patient || !medecin) {
-      unifiedNotificationService.error('Données manquantes pour créer le rendez-vous');
+      unifiedNotificationService.error('Données manquantes pour planifier le rendez-vous');
       return;
     }
 
@@ -576,7 +576,7 @@ const ConsultationCompletion = () => {
             onClick={() => navigate('/secretary-dashboard')}
             className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
           >
-            Retour au tableau de bord
+            Retour à l'accueil
           </button>
         </div>
       </div>
@@ -592,8 +592,7 @@ const ConsultationCompletion = () => {
             onClick={() => navigate('/secretary-dashboard')}
             className="flex items-center text-gray-600 hover:text-gray-900 mb-4"
           >
-            <ArrowLeft className="w-5 h-5 mr-2" />
-            Retour
+            <ArrowLeft className="w-5 h-5 mr-2" /> Retour à l'accueil
           </button>
           <h1 className="text-3xl font-bold text-gray-900">Completion de Consultation</h1>
           <p className="text-gray-600 mt-2">
@@ -703,7 +702,7 @@ const ConsultationCompletion = () => {
                                 ) : (
                                   <>
                                     <Plus className="w-3 h-3 mr-1" />
-                                    Créer un rendez-vous
+                                    Planifier rendez-vous
                                   </>
                                 )}
                               </button>

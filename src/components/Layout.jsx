@@ -77,10 +77,12 @@ const Layout = ({ children }) => {
           className={
             isFullHeightRoute
               ? 'flex-1 min-h-0 overflow-hidden flex flex-col p-0'
-              : 'flex-1 min-h-0 overflow-y-auto overflow-x-hidden p-4 sm:p-6'
+              : 'flex-1 min-h-0 overflow-y-auto overflow-x-hidden p-2 xs:p-3 sm:p-4 md:p-5 lg:p-6'
           }
         >
-          {children}
+          <div className="h-full">
+            {children}
+          </div>
         </main>
       </div>
     </div>

@@ -133,7 +133,7 @@ const TableauBordComptable = () => {
         <div>
           <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-3">
             <Activity className="w-8 h-8 text-purple-600" />
-            Tableau de Bord Comptable
+            Vue d'ensemble comptable
           </h1>
           <p className="text-gray-600 mt-2">
             Vue d'ensemble complète de la performance financière

@@ -142,7 +142,7 @@ const FichePatient = () => {
   };
 
   const handleDelete = async (id) => {
-    if (window.confirm('Êtes-vous sûr de vouloir supprimer ce patient ?')) {
+    if (window.confirm('Êtes-vous sûr de vouloir archiver ce patient ?')) {
       try {
         const { error } = await supabase
           .from('patients')
@@ -305,13 +305,13 @@ const FichePatient = () => {
                       onClick={() => handleEdit(patient)}
                       className="text-blue-600 hover:text-blue-900 mr-3"
                     >
-                      Modifier
+                      Mettre à jour
                     </button>
                     <button
                       onClick={() => handleDelete(patient.id)}
                       className="text-red-600 hover:text-red-900"
                     >
-                      Supprimer
+                      Archiver
                     </button>
                   </td>
                 </tr>

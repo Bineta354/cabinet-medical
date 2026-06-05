@@ -605,7 +605,7 @@ const ScanDocuments = () => {
                     <button
                       onClick={() => deleteDocument(document.id)}
                       className="p-2 text-gray-400 hover:text-red-600 transition-colors"
-                      title="Supprimer"
+                      title="Retirer"
                     >
                       <Trash2 className="w-4 h-4" />
                     </button>

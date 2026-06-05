@@ -33,7 +33,7 @@ class TransfertDossierService {
           .from('consultations')
           .select(`
             *,
-            medecin:users(nom, prenom, specialite)
+            medecin:users!inner(nom, prenom, specialite, actif)
           `)
           .eq('patient_id', patientId)
           .in('id', consultationIds.length > 0 ? consultationIds : [0])

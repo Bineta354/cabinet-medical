@@ -81,14 +81,16 @@ const AppointmentsPage = () => {
         .select(`
           *,
           patient:patients(*),
-          medecin:users(*)
+          medecin:users!inner(*)
         `)
         .gte('date_heure', `${selectedDate}T00:00:00`)
         .lt('date_heure', `${selectedDate}T23:59:59`)
         .order('date_heure', { ascending: false });
 
       if (error) throw error;
-      setAppointments(data || []);
+      // Filtrer pour ne montrer que les rendez-vous avec des médecins actifs
+      const filteredData = (data || []).filter(appointment => appointment.medecin?.actif !== false);
+      setAppointments(filteredData);
     } catch (error) {
       console.error('Erreur lors du chargement des rendez-vous:', error);
     }

@@ -243,7 +243,7 @@ const SalleAttentePage = () => {
       called: { color: 'bg-orange-100 text-orange-800', icon: Bell, label: 'Appelé' },
       appele: { color: 'bg-orange-100 text-orange-800', icon: Bell, label: 'Appelé' },
       medecin_pret: { color: 'bg-cyan-100 text-cyan-800', icon: CheckCircle, label: 'Médecin prêt' },
-      en_route: { color: 'bg-purple-100 text-purple-800', icon: User, label: 'En route' },
+      en_route: { color: 'bg-purple-100 text-purple-800', icon: User, label: 'Patient appelé' },
       in_consultation: { color: 'bg-green-100 text-green-800', icon: Stethoscope, label: 'En consultation' }
     };
     
@@ -316,8 +316,8 @@ const SalleAttentePage = () => {
       <div className="flex-shrink-0 bg-white border-b border-gray-200 px-4 py-2">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-xl font-bold text-gray-900">Salle d'Attente</h1>
-            <p className="text-xs text-gray-600">Gestion en temps réel des patients présents</p>
+            <h1 className="text-page-title">Salle d'Attente</h1>
+            <p className="text-small">Gestion en temps réel des patients présents</p>
           </div>
           <div className="flex items-center space-x-3">
             <div className="flex items-center space-x-1.5">
@@ -372,22 +372,8 @@ const SalleAttentePage = () => {
           <div className="flex items-center">
             <Clock className="w-5 h-5 text-yellow-600" />
             <div className="ml-2">
-              <p className="text-xs font-medium text-gray-500">En attente</p>
-              <p className="text-lg font-bold text-gray-900">{queueStats.waiting}</p>
-            </div>
-          </div>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => setStatusFilter(statusFilter === 'present' ? 'all' : 'present')}
-          className={`text-left p-2 bg-white rounded shadow border border-gray-200 hover:shadow-md transition-all ${statusFilter === 'present' ? 'ring-2 ring-blue-400' : ''}`}
-        >
-          <div className="flex items-center">
-            <UserCheck className="w-5 h-5 text-blue-600" />
-            <div className="ml-2">
-              <p className="text-xs font-medium text-gray-500">Présents</p>
-              <p className="text-lg font-bold text-gray-900">{queueStats.present}</p>
+              <p className="text-stat-label">En attente</p>
+              <p className="text-stat-number">{queueStats.waiting}</p>
             </div>
           </div>
         </button>
@@ -400,8 +386,8 @@ const SalleAttentePage = () => {
           <div className="flex items-center">
             <Bell className="w-5 h-5 text-orange-600" />
             <div className="ml-2">
-              <p className="text-xs font-medium text-gray-500">Appelés</p>
-              <p className="text-lg font-bold text-gray-900">{queueStats.called}</p>
+              <p className="text-stat-label">Appelés</p>
+              <p className="text-stat-number">{queueStats.called}</p>
             </div>
           </div>
         </button>
@@ -418,8 +404,8 @@ const SalleAttentePage = () => {
           <div className="flex items-center">
             <Stethoscope className="w-5 h-5 text-green-600" />
             <div className="ml-2">
-              <p className="text-xs font-medium text-gray-500">En consultation</p>
-              <p className="text-lg font-bold text-gray-900">
+              <p className="text-stat-label">En consultation</p>
+              <p className="text-stat-number">
                 {queueStats.inConsultation}
               </p>
             </div>

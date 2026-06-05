@@ -90,8 +90,8 @@ const TestNotifications = () => {
       return;
     }
     
-    // Test patient en route
-    console.log('🚶‍♂️ [TestNotifications] Test 1: Patient en route...');
+    // Test patient appelé
+    console.log('🚶‍♂️ [TestNotifications] Test 1: Patient appelé...');
     setTimeout(() => {
       try {
         const result = unifiedNotificationService.medicalWorkflow('patient_en_route', 'Amadou Diallo', 'Aminata Diallo');

@@ -347,6 +347,7 @@ const IntroductionPatientPage = () => {
         .from('users')
         .select('*')
         .eq('role', 'doctor')
+        .eq('actif', true)
         .order('nom', { ascending: true });
       
       if (error) throw error;
@@ -682,7 +683,7 @@ const IntroductionPatientPage = () => {
       console.log('📋 [IntroductionPatient] Patient:', patientName, '| Médecin:', medecinId);
 
       if (current.status === 'en_route') {
-        throw new Error('Le patient est déjà en route vers le médecin');
+        throw new Error('Le patient est déjà appelé vers le médecin');
       }
 
       if (
@@ -692,13 +693,8 @@ const IntroductionPatientPage = () => {
         throw new Error('Le patient est déjà en consultation');
       }
 
-      const transition = validateQueueTransition(current.status, 'en_route');
-      if (
-        transition.needsConfirmation &&
-        !confirmSkippedWorkflowSteps(transition.skippedSteps, 'envoyer le patient')
-      ) {
-        return;
-      }
+      // PAS de validation workflow - "Introduire" est une demande, pas une confirmation
+      // La même logique que côté médecin pour éviter le popup inutile
 
       // Mettre à jour le statut du patient vers "en_route"
       const { error: updErr } = await supabase
@@ -738,10 +734,73 @@ const IntroductionPatientPage = () => {
       }
 
       await Promise.all([fetchWaitingQueue(), fetchTodayAppointments()]);
-      unifiedNotificationService.success(`${patientName} est en route vers le médecin`);
+      unifiedNotificationService.success(`${patientName} est appelé vers le médecin`);
     } catch (error) {
       console.error('❌ [IntroductionPatient] Erreur lors de l\'autorisation du patient:', error);
       unifiedNotificationService.error(error.message || 'Erreur lors de l\'envoi du patient en consultation');
+    } finally {
+      setIsLoading(prev => ({ ...prev, actions: false }));
+    }
+  };
+
+  // Marquer le patient comme entré en consultation (physiquement dans le bureau)
+  const handleMarkInConsultation = async (waitingQueueId) => {
+    if (!waitingQueueId) {
+      unifiedNotificationService.error('ID de file d\'attente manquant');
+      return;
+    }
+
+    setIsLoading(prev => ({ ...prev, actions: true }));
+    
+    try {
+      console.log('🔄 [IntroductionPatient] Marquage patient en consultation:', waitingQueueId);
+      
+      // Récupérer les infos du patient
+      const current = waitingQueue.find(i => i.id === waitingQueueId);
+      if (!current) {
+        throw new Error('Patient non trouvé dans la file d\'attente');
+      }
+
+      const patientName = `${current?.patient?.prenom ?? ''} ${current?.patient?.nom ?? ''}`.trim();
+      const medecinId = current?.medecin_id ?? current?.medecin?.id;
+      
+      // Mettre à jour le statut du patient vers "in_consultation"
+      const { error: updErr } = await supabase
+        .from('waiting_queue')
+        .update({ 
+          status: 'in_consultation',
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', waitingQueueId);
+
+      if (updErr) {
+        console.error('❌ [IntroductionPatient] Erreur mise à jour statut consultation:', updErr);
+        throw updErr;
+      }
+      
+      console.log('✅ [IntroductionPatient] Statut mis à jour vers "in_consultation"');
+
+      // Envoyer notification au médecin pour confirmer l'entrée
+      if (medecinId && userProfile?.id) {
+        await sendNotification(
+          NOTIFICATION_TYPES.PATIENT_ON_WAY,
+          userProfile.id,
+          medecinId,
+          null,
+          `${patientName} est entré en consultation`,
+          {
+            waitingQueueId: waitingQueueId,
+            patientId: current?.patient_id ?? current?.patient?.id,
+            action: 'entered_consultation'
+          }
+        );
+      }
+
+      await fetchWaitingQueue();
+      unifiedNotificationService.success(`${patientName} est entré en consultation`);
+    } catch (error) {
+      console.error('❌ [IntroductionPatient] Erreur lors du marquage en consultation:', error);
+      unifiedNotificationService.error(error.message || 'Erreur lors du marquage en consultation');
     } finally {
       setIsLoading(prev => ({ ...prev, actions: false }));
     }
@@ -841,7 +900,13 @@ const IntroductionPatientPage = () => {
         </div>
 
         {/* Notifications médecin-secrétaire */}
-        <NotificationPanel notifications={notifications} onRefresh={fetchNotifications} />
+        <NotificationPanel 
+          notifications={notifications} 
+          onRefresh={fetchNotifications}
+          userProfile={userProfile}
+          waitingQueue={waitingQueue}
+          onAuthorizePatient={handleAuthorizePatient}
+        />
 
         {/* Boutons de mode compact */}
         <div className="mb-4 flex space-x-2">
@@ -947,6 +1012,7 @@ const IntroductionPatientPage = () => {
                     item={item}
                     index={index}
                     onAuthorize={handleAuthorizePatient}
+                    onMarkInConsultation={handleMarkInConsultation}
                     isLoading={isLoading}
                   />
                 ))}

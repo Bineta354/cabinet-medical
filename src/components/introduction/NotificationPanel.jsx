@@ -1,8 +1,9 @@
 import React from 'react';
-import { Bell } from 'lucide-react';
+import { Bell, Check, X, Clock } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
+import { sendNotification, NOTIFICATION_TYPES } from '../../lib/notifications';
 
-const NotificationPanel = ({ notifications, onRefresh }) => {
+const NotificationPanel = ({ notifications, onRefresh, userProfile, waitingQueue, onAuthorizePatient }) => {
   const handleMarkAsRead = async (notification) => {
     if (!notification.lu) {
       try {
@@ -17,6 +18,48 @@ const NotificationPanel = ({ notifications, onRefresh }) => {
     }
   };
 
+  const handleConfirm = async (notification) => {
+    try {
+      const waitingQueueId = notification.waiting_queue_id;
+      if (!waitingQueueId) {
+        console.error('ID de file d\'attente manquant');
+        return;
+      }
+
+      // Autoriser le patient (confirmer) - PAS besoin de marquer comme lu ici
+      // Le statut changera en temps réel côté médecin via Supabase Realtime
+      if (onAuthorizePatient) {
+        await onAuthorizePatient(waitingQueueId);
+      }
+      
+      // Marquer la notification comme lue SEULEMENT après succès
+      await handleMarkAsRead(notification);
+    } catch (error) {
+      console.error('Erreur confirmation:', error);
+    }
+  };
+
+  const handlePostpone = async (notification) => {
+    try {
+      // Marquer la notification comme lue
+      await handleMarkAsRead(notification);
+      
+      // Mettre le patient en attente (statut 'waiting')
+      const waitingQueueId = notification.waiting_queue_id;
+      if (waitingQueueId) {
+        await supabase
+          .from('waiting_queue')
+          .update({ status: 'waiting', updated_at: new Date().toISOString() })
+          .eq('id', waitingQueueId);
+        
+        // Rafraîchir la file d'attente
+        if (onRefresh) onRefresh();
+      }
+    } catch (error) {
+      console.error('Erreur report:', error);
+    }
+  };
+
   if (notifications.length === 0) return null;
 
   return (
@@ -28,35 +71,52 @@ const NotificationPanel = ({ notifications, onRefresh }) => {
             Notifications ({notifications.length})
           </h3>
         </div>
-        <div className="space-y-1.5">
-          {notifications.slice(0, 3).map((notification) => (
+        <div className="space-y-2">
+          {notifications.slice(0, 5).map((notification) => (
             <div 
               key={notification.id} 
-              className={`bg-white p-2 rounded border border-blue-100 text-sm ${
-                (notification.type_notification === 'doctor_request' || notification.type_notification === 'demande_autorisation')
-                  ? 'cursor-pointer hover:bg-blue-50 transition-colors' 
-                  : ''
+              className={`bg-white p-3 rounded border border-blue-100 text-sm ${
+                !notification.lu ? 'border-l-4 border-l-blue-500' : ''
               }`}
-              onClick={() => handleMarkAsRead(notification)}
             >
-              <p className="text-gray-800 text-xs">{notification.message}</p>
-              <div className="flex justify-between items-center mt-1">
-                {(notification.type_notification === 'doctor_request' || notification.type_notification === 'demande_autorisation') && (
-                  <p className="text-xs text-blue-600 font-medium">
-                    👆 Cliquez pour marquer comme lu
-                  </p>
-                )}
-                {!notification.lu && (
-                  <span className="text-xs bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded">
-                    Non lu
-                  </span>
-                )}
-              </div>
+              <p className="text-gray-800 text-sm font-medium">{notification.message}</p>
+              <p className="text-xs text-gray-500 mt-1">
+                {new Date(notification.created_at).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
+              </p>
+              
+              {/* Actions pour les notifications de type PATIENT_READY */}
+              {notification.type_notification === 'patient_ready' && !notification.lu && (
+                <div className="flex gap-2 mt-3">
+                  <button
+                    onClick={() => handleConfirm(notification)}
+                    className="flex items-center gap-1 px-3 py-1.5 bg-green-600 text-white text-xs font-medium rounded hover:bg-green-700 transition-colors"
+                  >
+                    <Check className="w-3 h-3" />
+                    Confirmer - Je l'introduis
+                  </button>
+                  <button
+                    onClick={() => handlePostpone(notification)}
+                    className="flex items-center gap-1 px-3 py-1.5 bg-orange-500 text-white text-xs font-medium rounded hover:bg-orange-600 transition-colors"
+                  >
+                    <Clock className="w-3 h-3" />
+                    Reporter
+                  </button>
+                </div>
+              )}
+              
+              {!notification.lu && notification.type_notification !== 'patient_ready' && (
+                <button
+                  onClick={() => handleMarkAsRead(notification)}
+                  className="mt-2 text-xs text-blue-600 hover:text-blue-800"
+                >
+                  Marquer comme lu
+                </button>
+              )}
             </div>
           ))}
-          {notifications.length > 3 && (
+          {notifications.length > 5 && (
             <p className="text-xs text-blue-600 text-center">
-              +{notifications.length - 3} autres notifications
+              +{notifications.length - 5} autres notifications
             </p>
           )}
         </div>

@@ -135,7 +135,7 @@ const RechercheRendezVousPage = () => {
             duree,
             priorite,
             patient:patients(id, nom, prenom, telephone),
-            medecin:users(id, nom, prenom, specialite)
+            medecin:users!inner(id, nom, prenom, specialite, actif)
           `
         )
         .order('date_heure', { ascending: true });

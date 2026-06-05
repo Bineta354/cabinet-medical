@@ -156,7 +156,10 @@ const WaitingQueuePage = () => {
       console.log('🔄 [WaitingQueue] Rechargement file d\'attente...');
       const { data: waitingQueueData, error: waitingError } = await supabase
         .from('waiting_queue')
-        .select('*')
+        .select(`
+          *,
+          medecin:users!inner(id, actif)
+        `)
         .order('created_at', { ascending: false });
 
       if (waitingError) {
@@ -164,8 +167,11 @@ const WaitingQueuePage = () => {
         return;
       }
 
+      // Filtrer pour ne montrer que les entrées avec des médecins actifs
+      const filteredWaitingQueueData = (waitingQueueData || []).filter(item => item.medecin?.actif !== false);
+
       // Récupérer les infos patients séparément
-      const patientIds = Array.from(new Set((waitingQueueData || []).map(i => i.patient_id).filter(Boolean)));
+      const patientIds = Array.from(new Set(filteredWaitingQueueData.map(i => i.patient_id).filter(Boolean)));
       let patientMap = {};
       if (patientIds.length > 0) {
         const { data: patientsRows, error: patientsErr } = await supabase
@@ -180,7 +186,7 @@ const WaitingQueuePage = () => {
       }
 
       // Transformer les données de la file d'attente en format patients
-      const rawPatientsData = waitingQueueData?.map(item => {
+      const rawPatientsData = filteredWaitingQueueData?.map(item => {
         const p = patientMap[item.patient_id] || {};
         return {
           id: item.id, // ID de la file d'attente
@@ -226,7 +232,8 @@ const WaitingQueuePage = () => {
         .from('appointments')
         .select(`
           *,
-          patient:patients(nom, prenom, telephone, numero_dossier)
+          patient:patients(nom, prenom, telephone, numero_dossier),
+          medecin:users!inner(id, actif)
         `)
         .gte('date_heure', new Date().toISOString().split('T')[0])
         .order('date_heure', { ascending: false });
@@ -236,8 +243,11 @@ const WaitingQueuePage = () => {
         return;
       }
 
+      // Filtrer pour ne montrer que les rendez-vous avec des médecins actifs
+      const filteredAppointmentsData = (appointmentsData || []).filter(apt => apt.medecin?.actif !== false);
+
       // Transformer les rendez-vous en format attendu
-      const transformedAppointments = appointmentsData?.map(apt => ({
+      const transformedAppointments = filteredAppointmentsData?.map(apt => ({
         id: apt.id,
         patient_id: apt.patient_id,
         patient_nom: apt.patient?.nom || '',
@@ -288,7 +298,10 @@ const WaitingQueuePage = () => {
       console.log('📋 [WaitingQueue] Récupération de la file d\'attente...');
       const { data: waitingQueueData, error: waitingError } = await supabase
         .from('waiting_queue')
-        .select('*')
+        .select(`
+          *,
+          medecin:users!inner(id, actif)
+        `)
         .order('created_at', { ascending: false });
 
       if (waitingError) {
@@ -297,8 +310,11 @@ const WaitingQueuePage = () => {
       }
       console.log('✅ [WaitingQueue] File d\'attente récupérée:', waitingQueueData?.length || 0, 'éléments');
 
+      // Filtrer pour ne montrer que les entrées avec des médecins actifs
+      const filteredWaitingQueueData = (waitingQueueData || []).filter(item => item.medecin?.actif !== false);
+
       // Récupérer les infos patients séparément
-      const patientIds = Array.from(new Set((waitingQueueData || []).map(i => i.patient_id).filter(Boolean)));
+      const patientIds = Array.from(new Set(filteredWaitingQueueData.map(i => i.patient_id).filter(Boolean)));
       let patientMap = {};
       if (patientIds.length > 0) {
         const { data: patientsRows, error: patientsErr } = await supabase
@@ -313,7 +329,7 @@ const WaitingQueuePage = () => {
       }
 
       // Transformer les données de la file d'attente en format patients
-      const rawPatientsData = waitingQueueData?.map(item => {
+      const rawPatientsData = filteredWaitingQueueData?.map(item => {
         const p = patientMap[item.patient_id] || {};
         return {
           id: item.id, // ID de la file d'attente
@@ -349,7 +365,8 @@ const WaitingQueuePage = () => {
         .from('appointments')
         .select(`
           *,
-          patient:patients(nom, prenom, telephone, numero_dossier)
+          patient:patients(nom, prenom, telephone, numero_dossier),
+          medecin:users!inner(id, actif)
         `)
         .gte('date_heure', new Date().toISOString().split('T')[0])
         .order('date_heure', { ascending: true });
@@ -360,8 +377,11 @@ const WaitingQueuePage = () => {
       }
       console.log('✅ [WaitingQueue] Rendez-vous récupérés:', appointmentsData?.length || 0, 'rendez-vous');
 
+      // Filtrer pour ne montrer que les rendez-vous avec des médecins actifs
+      const filteredAppointmentsData = (appointmentsData || []).filter(apt => apt.medecin?.actif !== false);
+
       // Transformer les rendez-vous en format attendu
-      const transformedAppointments = appointmentsData?.map(apt => ({
+      const transformedAppointments = filteredAppointmentsData?.map(apt => ({
         id: apt.id,
         patient_id: apt.patient_id, // Ajouter le patient_id manquant
         patient_nom: apt.patient?.nom || '',
@@ -378,8 +398,9 @@ const WaitingQueuePage = () => {
       console.log('👨‍⚕️ [WaitingQueue] Récupération des praticiens...');
       const { data: doctorsData, error: doctorsError } = await supabase
         .from('users')
-        .select('id, nom, prenom, specialite')
+        .select('id, nom, prenom, specialite, actif')
         .eq('role', 'praticien')
+        .eq('actif', true)
         .order('nom', { ascending: true });
 
       if (doctorsError) {
@@ -406,13 +427,13 @@ const WaitingQueuePage = () => {
           console.log('⚠️  [WaitingQueue] Aucun praticien via role=doctor, fallback par appointments, ids:', uniqueDoctorIds);
           const { data: doctorsById, error: doctorsByIdError } = await supabase
             .from('users')
-            .select('id, nom, prenom, specialite')
+            .select('id, nom, prenom, specialite, actif')
             .in('id', uniqueDoctorIds);
           if (doctorsByIdError) {
             console.warn('❗ [WaitingQueue] Erreur fallback praticiens par id:', doctorsByIdError);
           }
           if (doctorsById && doctorsById.length > 0) {
-            finalDoctors = doctorsById.map(d => ({
+            finalDoctors = doctorsById.filter(d => d.actif !== false).map(d => ({
               id: d.id,
               nom: d.nom || `#${d.id}`,
               prenom: d.prenom || '',
@@ -738,10 +759,10 @@ const WaitingQueuePage = () => {
     }
   };
 
-  // Nouvelle fonction pour ajouter un patient depuis un rendez-vous à la file d'attente
+  // Nouvelle fonction pour inscrire un patient depuis un rendez-vous à la file d'attente
   const handleAddPatientFromAppointment = async (appointmentId) => {
     try {
-      console.log('🔄 [WaitingQueue] Ajout patient depuis rendez-vous:', appointmentId);
+      console.log('🔄 [WaitingQueue] Inscription patient depuis rendez-vous:', appointmentId);
       
       // Récupérer les détails du rendez-vous
       const appointment = appointments.find(apt => apt.id === appointmentId);
@@ -1127,9 +1148,9 @@ const WaitingQueuePage = () => {
             onSubmit={handleAddPatient}
             onCancel={() => setShowAddPatientModal(false)}
             onAddAnother={() => {
-              console.log('🔄 [WaitingQueue] Ajout d\'un autre patient');
+              console.log('🔄 [WaitingQueue] Inscription d\'un autre patient');
             }}
-            title="Ajouter un patient à la file d'attente"
+            title="Inscrire un patient à la file d'attente"
             submitText="Enregistrer et fermer"
             showAddAnother={true}
             defaultDoctor={selectedDoctor}
